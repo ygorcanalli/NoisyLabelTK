@@ -1,8 +1,10 @@
 # %%
+import __init__
+import noisylabeltk
+from noisylabeltk.noise_generator import PairwiseLabelNoiseGenerator
 from sklearn.preprocessing import OneHotEncoder
-from .. import PairwiseLabelNoiseGenerator, UniformLabelNoiseGenerator
 import numpy as np
-
+#%%
 n = 10000
 m = 3
 

@@ -19,7 +19,7 @@ class LabelNoiseGenerator(object, metaclass=ABCMeta):
         if noisy_labels.shape != (self.length, self.n_classes):
             raise Exception("Noisy labels must have same shape than original")
         accum = 0
-        for i in range(n):
+        for i in range(self.length):
             accum += np.allclose(self.labels[i], noisy_labels[i])
         return 1 - accum/self.length
         
@@ -70,3 +70,6 @@ class PairwiseLabelNoiseGenerator(TensorialLabelNoiseGenerator):
         if transition_matrix.shape[0] != transition_matrix.shape[1]:
             raise Exception("Transition matrix must to be square")
         super().__init__(labels, transition_matrix)
+# %%
+
+# %%
