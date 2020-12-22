@@ -4,7 +4,6 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.metrics import categorical_accuracy
 
-from noise import cm_uniform
 import util
 
 # implementation is taken from: https://github.com/xingjunm/dimensionality-driven-learning
