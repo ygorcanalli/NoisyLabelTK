@@ -8,6 +8,7 @@ tensorflow-gpu = "*"
 ipykernel = "*"
 jupyter = "*"
 pylint = "*"
+tensorflow-datasets = "*"
 
 [dev-packages]
 
