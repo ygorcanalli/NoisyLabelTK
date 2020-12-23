@@ -4,10 +4,8 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.metrics import categorical_accuracy
 
-import util
-
-# implementation is taken from: https://github.com/xingjunm/dimensionality-driven-learning
-def distillation_loss(num_classes, alpha=util.ALPHA):
+# implementation is taken from: https://github.com/gorkemalgan/corrupting_labels_with_distillation
+def distillation_loss(num_classes, alpha=0.1):
     def loss(y_true, y_pred):
         # Extract the one-hot encoded values and the softs separately so that we can create two objective functions
         y_true, y_true_softs = y_true[: , :num_classes], y_true[: , num_classes:]

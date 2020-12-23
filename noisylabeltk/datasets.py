@@ -5,38 +5,118 @@ import tensorflow_datasets as tfds
 
 #%%
 def load_mnist():
-    (train_ds, test_ds), ds_info = tfds.load('mnist',
-                                    split=['train', 'test'],
+    (train_ds, validation_ds, test_ds), ds_info = tfds.load('mnist',
+                                    split=['train[0:90%]', 'train[-10%:]','test'],
                                     as_supervised=True,
                                     with_info=True)
-    return (train_ds, test_ds), ds_info
+
+    train_ds = train_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_ds = train_ds.cache()
+    train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
+    train_ds = train_ds.batch(256)
+    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    validation_ds = validation_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    validation_ds = validation_ds.cache()
+    validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
+    validation_ds = validation_ds.batch(256)
+    validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    test_ds = test_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_ds = test_ds.batch(256)
+    test_ds = test_ds.cache()
+    test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    return (train_ds, validation_ds, test_ds), ds_info
 
 def load_fashionmnist():
-    (train_ds, test_ds), ds_info = tfds.load('fashion_mnist',
-                                    split=['train', 'test'],
+    (train_ds, validation_ds, test_ds), ds_info = tfds.load('fashion_mnist',
+                                    split=['train[0:90%]', 'train[-10%:]','test'],
                                     as_supervised=True,
                                     with_info=True)
-    return (train_ds, test_ds), ds_info
+
+    train_ds = train_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_ds = train_ds.cache()
+    train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
+    train_ds = train_ds.batch(256)
+    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    validation_ds = validation_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    validation_ds = validation_ds.cache()
+    validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
+    validation_ds = validation_ds.batch(256)
+    validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    test_ds = test_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_ds = test_ds.batch(256)
+    test_ds = test_ds.cache()
+    test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    return (train_ds, validation_ds, test_ds), ds_info
 
 def load_cifar10():
-    (train_ds, test_ds), ds_info = tfds.load('cifar10', 
-                                    split=['train', 'test'],
+    (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar10', 
+                                    split=['train[0:90%]', 'train[-10%:]','test'],
                                     shuffle_files=True,
                                     as_supervised=True,
                                     with_info=True)
-    
 
-    return (train_ds, test_ds), ds_info
+    train_ds = train_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_ds = train_ds.cache()
+    train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
+    train_ds = train_ds.batch(128)
+    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
-def load_cifar100():
-    (train_ds, test_ds), ds_info = tfds.load('cifar100', 
-                                    split=['train', 'test'],
+    validation_ds = validation_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    validation_ds = validation_ds.cache()
+    validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
+    validation_ds = validation_ds.batch(128)
+    validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    test_ds = test_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_ds = test_ds.batch(128)
+    test_ds = test_ds.cache()
+    test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    return (train_ds, validation_ds, test_ds), ds_info
+
+def load_cifar10():
+    (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar100', 
+                                    split=['train[0:90%]', 'train[-10%:]','test'],
                                     shuffle_files=True,
                                     as_supervised=True,
                                     with_info=True)
-    
 
-    return (train_ds, test_ds), ds_info
+    train_ds = train_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    train_ds = train_ds.cache()
+    train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
+    train_ds = train_ds.batch(256)
+    train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    validation_ds = validation_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    validation_ds = validation_ds.cache()
+    validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
+    validation_ds = validation_ds.batch(256)
+    validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    test_ds = test_ds.map(
+        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    test_ds = test_ds.batch(256)
+    test_ds = test_ds.cache()
+    test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    return (train_ds, validation_ds, test_ds), ds_info
 
 def load_svhn():
     (train_ds, test_ds), ds_info = tfds.load('svhn_cropped',
@@ -71,4 +151,8 @@ def load_germancredit():
 
     
 
+# %%
+def normalize_img(image, label):
+  """Normalizes images: `uint8` -> `float32`."""
+  return tf.cast(image, tf.float32) / 255., label
 # %%
