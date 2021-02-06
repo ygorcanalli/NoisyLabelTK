@@ -2,6 +2,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from sklearn.datasets import load_diabetes, load_breast_cancer
 
 #%%
 def load_mnist():
@@ -89,7 +90,7 @@ def load_cifar10():
 
     return (train_ds, validation_ds, test_ds), ds_info
 
-def load_cifar10():
+def load_cifar100():
     (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar100', 
                                     split=['train[0:90%]', 'train[-10%:]','test'],
                                     shuffle_files=True,
@@ -117,7 +118,6 @@ def load_cifar10():
     test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
     return (train_ds, validation_ds, test_ds), ds_info
-
 
 def load_food101():
     (train_ds, validation_ds, test_ds), ds_info = tfds.load('food101', 
@@ -148,7 +148,6 @@ def load_food101():
 
     return (train_ds, validation_ds, test_ds), ds_info
 
-
 def load_svhn():
     (train_ds, test_ds), ds_info = tfds.load('svhn_cropped',
                                     split=['train', 'test'],
@@ -174,13 +173,11 @@ def load_openimage():
     return (train_ds, test_ds), ds_info
 
 def load_germancredit():
-    (train_ds, test_ds), ds_info = tfds.load('german_credit_numeric',
-                                    split=['train[:80%]', 'train[-20%:]'],
+    (train_ds, validation_ds, test_ds), ds_info = tfds.load('german_credit_numeric',
+                                    split=['train[:80%]', 'train[-20%:-10%]', 'train[-10%:]'],
                                     as_supervised=True,
                                     with_info=True)
-    return (train_ds, test_ds), ds_info
-
-    
+    return (train_ds, validation_ds, test_ds), ds_info   
 
 # %%
 def normalize_img(image, label):
