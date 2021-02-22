@@ -3,17 +3,12 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Sequential, regularizers
 from tensorflow.keras.layers import InputLayer, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Activation, BatchNormalization
-#%%
-def simple_mlp_32_64(ds_info):
-    num_classes = ds_info.features["label"].num_classes
 
-    if 'features' in ds_info.features:
-        input_shape = ds_info.features["features"].shape
-
-
+def simple_mlp_32_64(input_shape, num_classes):
     model = Sequential(
         [
-            Dense(32, input_shape=input_shape, activation='relu'),
+            InputLayer(input_shape=input_shape),
+            Dense(32, activation='relu'),
             Dense(64,activation="relu"),
             Dense(num_classes, activation="softmax")
         ]
@@ -21,9 +16,7 @@ def simple_mlp_32_64(ds_info):
     return model
 
 # Taken from: https://keras.io/examples/vision/mnist_convnet/
-def simple_conv_32_64(ds_info):
-    num_classes = ds_info.features["label"].num_classes
-    input_shape = ds_info.features["image"].shape
+def simple_conv_32_64(input_shape, num_classes):
     model = Sequential(
         [
             InputLayer(input_shape=input_shape),
@@ -129,5 +122,16 @@ def vgg(ds_info):
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
     return model
+
+
+models = {
+    "simple_mlp": simple_mlp_32_64,
+    "simple_conv": simple_conv_32_64
+}
+
+def create_model(model_name, input_shape, num_classes):
+    model_function = models[model_name]
+    return model_function(input_shape, num_classes)
+
 
 # %%
