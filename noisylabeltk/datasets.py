@@ -8,7 +8,7 @@ import sklearn.datasets as skds
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
-from noisylabeltk.noise_generator import PairwiseLabelNoiseGenerator
+from noisylabeltk.noise_generator import build_noise_generator
 
 BASE_PATH = "datasets"
 
@@ -53,11 +53,11 @@ class DatasetLoader(object):
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
-    def pollute_and_load(self, *args):
+    def pollute_and_load(self, noise_name, *args):
         dataset_loader = self.datasets[self.name]
         dataset = dataset_loader()
 
-        noise_generator = PairwiseLabelNoiseGenerator(dataset['train']['labels'], *args)
+        noise_generator = build_noise_generator(noise_name, dataset['train']['labels'], *args)
         noisy_train_labels = noise_generator.generate_noisy_labels()
 
         train_ds = np_to_dataset(dataset['train']['features'], noisy_train_labels)
