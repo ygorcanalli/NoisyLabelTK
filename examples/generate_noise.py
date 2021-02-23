@@ -20,7 +20,6 @@ T = np.array([[0.7,0.2,0.1],
 gen = PairwiseLabelNoiseGenerator(y_encode, T)
 noisy_labels = gen.generate_noisy_labels()
 gen.check_noise_rate(noisy_labels)
-
 #%%
 y = np.random.randint(0,m, (n,1) )
 y_encode = enc.fit_transform(y).toarray()
