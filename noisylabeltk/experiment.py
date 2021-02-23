@@ -1,13 +1,14 @@
 # %%
 import tensorflow as tf
 from noisylabeltk.datasets import DatasetLoader
+from noisylabeltk.loss import cross_entropy, boot_soft
 import noisylabeltk.models as models
 import neptune
 import datetime
 import numpy as np
 from neptunecontrib.monitoring.keras import NeptuneMonitor
 
-#%%
+
 PARAMS = {
     'batch_size': 64,
     'epochs': 10,
@@ -23,10 +24,9 @@ exp = neptune.create_experiment(name="noiselabeltk",
 log_dir = "tflogs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
 
-# %%
-#T = np.array([[0.9, 0.1],
-#              [0.2, 0.8]])
-T = np.identity(2)
+T = np.array([[0.9, 0.1],
+              [0.2, 0.8]])
+#T = np.identity(2)
 dataset_loader = DatasetLoader(PARAMS['dataset'])
 (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(T)
 
@@ -37,11 +37,11 @@ if T is not None:
 
 model = models.create_model(PARAMS['model'], num_features,  num_classes)
 model.compile(optimizer='adam',
-              loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+              loss=cross_entropy,
               metrics=['accuracy'])
               
 model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-#%%
+
 history = model.fit(train_ds, epochs=10, 
                     validation_data=validation_ds,
                     callbacks=[NeptuneMonitor()])

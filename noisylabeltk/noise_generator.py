@@ -1,8 +1,6 @@
-#%%
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-# %%
 class LabelNoiseGenerator(object, metaclass=ABCMeta):
 
     @abstractmethod
@@ -70,6 +68,3 @@ class PairwiseLabelNoiseGenerator(TensorialLabelNoiseGenerator):
         if transition_matrix.shape[0] != transition_matrix.shape[1]:
             raise Exception("Transition matrix must to be square")
         super().__init__(labels, transition_matrix)
-# %%
-
-# %%

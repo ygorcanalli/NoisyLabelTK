@@ -1,6 +1,4 @@
-#%%
 from __future__ import absolute_import, division, print_function, unicode_literals
-
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import pandas as pd
@@ -36,8 +34,6 @@ def normalize_img(image, label):
   """Normalizes images: `uint8` -> `float32`."""
   return tf.cast(image, tf.float32) / 255., label
 
-
-#%%
 
 class DatasetLoader(object):
 
