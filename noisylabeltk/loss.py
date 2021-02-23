@@ -164,3 +164,28 @@ def lid_paced_loss(alpha=1.0):
             return -K.sum(y_new * K.log(y_pred), axis=-1)
 
         return loss
+
+def make_loss(name, *args, **kwargs):
+        if name == 'distillation-loss':
+            return distillation_loss(*args, **kwargs)
+        elif name == 'acc-distillation':
+            return acc_distillation(*args, **kwargs)
+        elif name == 'symmetric-cross-entropy':
+            return symmetric_cross_entropy(*args, **kwargs)
+        elif name == 'cross-entropy':
+            return cross_entropy
+        elif name == 'boot-soft':
+            return boot_soft
+        elif name == 'boot-hard':
+            return boot_hard
+        elif name == 'forward':
+            return forward(*args, **kwargs)
+        elif name == 'backward':
+            return backward(*args, **kwargs)
+        elif name == 'lid':
+            return lid(*args, **kwargs)
+        elif name == 'lid-paced-loss':
+            return lid_paced_loss(*args, **kwargs)
+        else:
+            raise Exception('Unavailable loss function %s' % name)
+

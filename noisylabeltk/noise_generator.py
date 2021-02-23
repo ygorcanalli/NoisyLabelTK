@@ -63,8 +63,9 @@ class UniformLabelNoiseGenerator(TensorialLabelNoiseGenerator):
 class PairwiseLabelNoiseGenerator(TensorialLabelNoiseGenerator):
 
     def __init__(self, labels, transition_matrix):
-        if len(transition_matrix.shape) != 2:
+        np_transition_matrix = np.array(transition_matrix)
+        if len(np_transition_matrix.shape) != 2:
             raise Exception("Transition matrix must to be a 2D array")
-        if transition_matrix.shape[0] != transition_matrix.shape[1]:
+        if np_transition_matrix.shape[0] != np_transition_matrix.shape[1]:
             raise Exception("Transition matrix must to be square")
-        super().__init__(labels, transition_matrix)
+        super().__init__(labels, np_transition_matrix)

@@ -53,11 +53,11 @@ class DatasetLoader(object):
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
-    def pollute_and_load(self, T):
+    def pollute_and_load(self, *args):
         dataset_loader = self.datasets[self.name]
         dataset = dataset_loader()
 
-        noise_generator = PairwiseLabelNoiseGenerator(dataset['train']['labels'], T)
+        noise_generator = PairwiseLabelNoiseGenerator(dataset['train']['labels'], *args)
         noisy_train_labels = noise_generator.generate_noisy_labels()
 
         train_ds = np_to_dataset(dataset['train']['features'], noisy_train_labels)

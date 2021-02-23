@@ -1,7 +1,8 @@
 # %%
-import tensorflow as tf
+import sys
+import traceback
 from noisylabeltk.datasets import DatasetLoader
-from noisylabeltk.loss import cross_entropy, boot_soft
+from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
 import neptune
 import datetime
@@ -26,8 +27,20 @@ class Experiment(object):
                                              description=self.description,
                                              tags=[self.parameters['dataset'], self.parameters['robust-method']],
                                              params=parameters,
-                                             upload_source_files=['main.py'])
-        self.parameters['transition-matrix'] = np.array(self.parameters['transition-matrix'])
+                                             upload_source_files=['noiselabeltk/main.py'])
+
+        if 'noise_args' in self.parameters and self.parameters is not None:
+            for i, arg in enumerate(self.parameters['noise_args']):
+                self.exp.set_property('noise_arg_%d' % i, arg)
+
+        if 'loss_args' in self.parameters and self.parameters is not None:
+            for i, arg in enumerate(self.parameters['loss_args']):
+                self.exp.set_property('loss_arg_%d' % i, arg)
+
+        if 'loss_kwargs' in self.parameters and self.parameters is not None:
+            for key, value in enumerate(self.parameters['loss_kwargs']):
+                self.exp.set_property('loss_arg_%s' % key, value)
+
         self.train = None
         self.validation = None
         self.test = None
@@ -38,11 +51,13 @@ class Experiment(object):
 
         dataset_loader = DatasetLoader(self.parameters['dataset'])
 
-        if 'robust-method' in self.parameters and self.parameters['robust-method'] is not None and \
-                self.parameters['robust-method'] != 'none' and 'transition_matrix' in self.parameters:
-            self.exp.set_property('transition_matrix', self.parameters['transition_matrix'])
-            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(
-                self.parameters['transition-matrix'])
+        if 'noise' in self.parameters and self.parameters['noise'] is not None and \
+                self.parameters['noise'] != 'none':
+            args = []
+            if 'noise-args' in self.parameters and self.parameters['noise-args'] is not None:
+                args = self.parameters['noise-args']
+
+            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(*args)
         else:
             (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.load()
 
@@ -56,9 +71,23 @@ class Experiment(object):
         self.exp.set_property('num_classes', num_classes)
 
     def _build_model(self):
+
+        if 'robust-method' in self.parameters and self.parameters['robust-method'] is not None and \
+                self.parameters['robust-method'] != 'none':
+            args = []
+            kwargs = {}
+            if 'loss-args' in self.parameters and self.parameters['loss-args'] is not None:
+                args = self.parameters['loss-args']
+            if 'loss-kwargs' in self.parameters and self.parameters['loss-kwargs'] is not None:
+                kwargs = self.parameters['loss-kwargs']
+
+            loss_function = make_loss(self.parameters['robust-method'], *args, **kwargs)
+        else:
+            loss_function = make_loss('cross-entropy')
+
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes)
         self.model.compile(optimizer='adam',
-                           loss=cross_entropy,
+                           loss=loss_function,
                            metrics=['accuracy'])
 
         self.model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
@@ -75,8 +104,18 @@ class Experiment(object):
             neptune.log_metric('eval_' + self.model.metrics_names[j], metric)
 
     def run(self):
-        self._load_data()
-        self._build_model()
-        self._fit_model()
-        self._evaluate()
-        self.exp.stop()
+        try:
+            self._load_data()
+            self._build_model()
+            self._fit_model()
+            self._evaluate()
+        except Exception as ex:
+            try:
+                exc_info = sys.exc_info()
+            finally:
+                # Display the *original* exception
+                traceback.print_exception(*exc_info)
+                self.exp.stop('\n'.join(traceback.format_exception(*exc_info)))
+                del exc_info
+        else:
+            self.exp.stop()
