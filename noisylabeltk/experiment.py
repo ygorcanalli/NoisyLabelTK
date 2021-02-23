@@ -8,6 +8,9 @@ import neptune
 import datetime
 import numpy as np
 from neptunecontrib.monitoring.keras import NeptuneMonitor
+from git import Repo
+import io
+import os
 
 PROJECT_NAME = 'ygorcanalli/NoisyLabelTK'
 
@@ -47,6 +50,14 @@ class Experiment(object):
         self.num_features = None
         self.num_classes = None
 
+        repo = Repo(os.getcwd())
+        t = repo.head.commit.tree
+        diff_string = repo.git.diff(t)
+        data_io = io.StringIO(diff_string)
+
+        self.exp.log_artifact(data_io, destination='git_diff.txt')
+        data_io.close()
+
     def _load_data(self):
 
         dataset_loader = DatasetLoader(self.parameters['dataset'])
@@ -57,7 +68,7 @@ class Experiment(object):
             if 'noise-args' in self.parameters and self.parameters['noise-args'] is not None:
                 args = self.parameters['noise-args']
 
-            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(*args)
+            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(self.parameters['noise'], *args)
         else:
             (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.load()
 
