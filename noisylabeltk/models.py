@@ -124,8 +124,8 @@ def vgg(ds_info):
 
 
 models = {
-    "simple_mlp": simple_mlp_32_64,
-    "simple_conv": simple_conv_32_64
+    'simple-mlp': simple_mlp_32_64,
+    'simple-conv': simple_conv_32_64
 }
 
 def create_model(model_name, input_shape, num_classes):

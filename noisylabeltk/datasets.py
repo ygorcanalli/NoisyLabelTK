@@ -37,19 +37,20 @@ def normalize_img(image, label):
 
 class DatasetLoader(object):
 
-    def __init__(self, name):
+    def __init__(self, name, batch_size):
         self.name =  name
         self.datasets = {
             'german': self.load_germancredit,
             'breast-cancer': self.load_breastcancer
         }
+        self.batch_size = batch_size
 
     def load(self):
         dataset_loader = self.datasets[self.name]
         dataset = dataset_loader()
-        train_ds = np_to_dataset(dataset['train']['features'], dataset['train']['labels'])
-        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'])
-        test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'])
+        train_ds = np_to_dataset(dataset['train']['features'], dataset['train']['labels'], batch_size=self.batch_size)
+        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'], batch_size=self.batch_size)
+        test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'], batch_size=self.batch_size)
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
@@ -60,9 +61,9 @@ class DatasetLoader(object):
         noise_generator = build_noise_generator(noise_name, dataset['train']['labels'], *args)
         noisy_train_labels = noise_generator.generate_noisy_labels()
 
-        train_ds = np_to_dataset(dataset['train']['features'], noisy_train_labels)
-        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'])
-        test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'])
+        train_ds = np_to_dataset(dataset['train']['features'], noisy_train_labels, batch_size=self.batch_size)
+        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'], batch_size=self.batch_size)
+        test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'], batch_size=self.batch_size)
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
@@ -238,7 +239,7 @@ class DatasetLoader(object):
                                 'garantors', 'property', 'othereinstallments', 'housing', 'job', 'telephone', 'foreign']
         numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'age', 'existingcredits',
                               'numbermaintence']
-        target_class = 'label'
+        target_class = ['label']
 
         # categorical_features = [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18, 19]
         # numerical_features = [1, 4, 7, 10, 12, 15, 17]
@@ -257,14 +258,27 @@ class DatasetLoader(object):
         validation = ct.transform(validation)
         test = ct.transform(test)
 
-        num_classes = len(dataframe[target_class].unique())
+        num_classes = int(dataframe[target_class].nunique())
         num_features = train.shape[1] - num_classes
 
-        train_ds = np_to_dataset(train, num_classes)
-        validation_ds = np_to_dataset(validation, num_classes)
-        test_ds = np_to_dataset(test, num_classes)
+        dataset = {
+            'num_classes': num_classes,
+            'num_features': num_features,
+            'train': {
+                'features': train[:, :-num_classes],
+                'labels': train[:, -num_classes:]
+            },
+            'validation': {
+                'features': validation[:, :-num_classes],
+                'labels': validation[:, -num_classes:]
+            },
+            'test': {
+                'features': test[:, :-num_classes],
+                'labels': test[:, -num_classes:]
+            }
+        }
 
-        return (train_ds, validation_ds, test_ds), num_features, num_classes
+        return dataset
     def load_breastcancer(self):
         breast_cancer = skds.load_breast_cancer(as_frame=True)
         dataframe = breast_cancer['frame']
@@ -307,4 +321,3 @@ class DatasetLoader(object):
         }
 
         return dataset
-

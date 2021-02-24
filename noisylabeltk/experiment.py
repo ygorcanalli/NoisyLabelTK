@@ -29,8 +29,8 @@ class Experiment(object):
         self.exp = neptune.create_experiment(name=self.name,
                                              description=self.description,
                                              tags=[self.parameters['dataset'], self.parameters['robust-method']],
-                                             params=parameters,
-                                             upload_source_files=['noiselabeltk/main.py'])
+                                             params=parameters
+                                             )
 
         if 'noise_args' in self.parameters and self.parameters is not None:
             for i, arg in enumerate(self.parameters['noise_args']):
@@ -60,7 +60,7 @@ class Experiment(object):
 
     def _load_data(self):
 
-        dataset_loader = DatasetLoader(self.parameters['dataset'])
+        dataset_loader = DatasetLoader(self.parameters['dataset'], self.parameters['batch_size'])
 
         if 'noise' in self.parameters and self.parameters['noise'] is not None and \
                 self.parameters['noise'] != 'none':
