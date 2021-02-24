@@ -1,13 +1,44 @@
 from noisylabeltk.experiment import Experiment
+import contextlib
+import joblib
 from joblib import Parallel, delayed
 import os
+from tqdm import tqdm
 
-project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
+#project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
+project_name = 'ygorcanalli/sandbox'
 n_jobs = 8
 device = 'cpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+
+import tensorflow as tf
+
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        def __call__(self, *args, **kwargs):
+            tqdm_object.update(n=self.batch_size)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
+
+def create_and_run(parameters):
+    exp = Experiment(parameters, project_name)
+    exp.run()
+
 
 
 batch_size_list = [32]
@@ -76,9 +107,6 @@ for batch_size in batch_size_list:
                         parameters_list.append(parameters)
 
 num_experiments = len(parameters_list)
-def create_and_run(parameters, i):
-    exp = Experiment(parameters, project_name)
-    exp.run()
-    print("Progress: %d/%d" % (i, num_experiments))
 
-Parallel(n_jobs=n_jobs)(delayed(create_and_run)(parameters, i) for i, parameters in enumerate(parameters_list))
+with tqdm_joblib(tqdm(desc="%s progress" % project_name, total=num_experiments)) as progress_bar:
+    Parallel(n_jobs=n_jobs)(delayed(create_and_run)(parameters) for parameters in parameters_list)

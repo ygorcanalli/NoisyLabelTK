@@ -114,7 +114,7 @@ class Experiment(object):
 
     def run(self):
         try:
-            print("[%s] Experiment is running!" % self.exp._id)
+            #print("[%s] Experiment is running!" % self.exp._id)
             self._load_data()
             self._build_model()
             self._fit_model()
@@ -129,4 +129,4 @@ class Experiment(object):
                 del exc_info
         else:
             self.exp.stop()
-            print("[%s] Experiment is finished!" % self.exp.id)
+            #print("[%s] Experiment is finished!" % self.exp.id)
