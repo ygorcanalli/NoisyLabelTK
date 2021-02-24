@@ -12,12 +12,9 @@ from git import Repo
 import io
 import os
 
-PROJECT_NAME = 'ygorcanalli/NoisyLabelTK'
-
-
 class Experiment(object):
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, project_name):
 
         self.parameters = parameters
         self.name = "%s-%s-%s" % (
@@ -25,7 +22,7 @@ class Experiment(object):
 
         self.description = "Label Noise Robustness"
 
-        neptune.init(project_qualified_name=PROJECT_NAME)
+        neptune.init(project_qualified_name=project_name)
         self.exp = neptune.create_experiment(name=self.name,
                                              description=self.description,
                                              tags=[self.parameters['dataset'], self.parameters['robust-method']],
@@ -106,7 +103,8 @@ class Experiment(object):
     def _fit_model(self):
         history = self.model.fit(self.train, epochs=10,
                                  validation_data=self.validation,
-                                 callbacks=[NeptuneMonitor()])
+                                 callbacks=[NeptuneMonitor()],
+                                 verbose=0)
 
     def _evaluate(self):
         eval_metrics = self.model.evaluate(self.test, verbose=0)
@@ -116,6 +114,7 @@ class Experiment(object):
 
     def run(self):
         try:
+            print("[%s] Experiment is running!" % self.exp._id)
             self._load_data()
             self._build_model()
             self._fit_model()
@@ -130,3 +129,4 @@ class Experiment(object):
                 del exc_info
         else:
             self.exp.stop()
+            print("[%s] Experiment is finished!" % self.exp.id)

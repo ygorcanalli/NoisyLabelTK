@@ -1,8 +1,18 @@
 from noisylabeltk.experiment import Experiment
+from joblib import Parallel, delayed
+import os
+
+project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
+n_jobs = 8
+device = 'cpu'
+
+if device == 'cpu':
+    os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+
 
 batch_size_list = [32]
 epochs_list = [10]
-dataset_list = ['german']
+dataset_list = ['german', 'breast-cancer']
 model_list = ['simple-mlp']
 
 transition_matrix_list = []
@@ -45,7 +55,7 @@ for noise_rate in noise_rate_list:
 for transition_matrix in transition_matrix_list:
     noise_list.append( ('pairwise', [transition_matrix]) )
 
-
+parameters_list = []
 for batch_size in batch_size_list:
     for epochs in epochs_list:
         for dataset in dataset_list:
@@ -63,6 +73,12 @@ for batch_size in batch_size_list:
                             'loss-args': loss_args,
                             'loss-kwargs': loss_kwargs
                         }
+                        parameters_list.append(parameters)
 
-                        exp = Experiment(parameters)
-                        exp.run()
+num_experiments = len(parameters_list)
+def create_and_run(parameters, i):
+    exp = Experiment(parameters, project_name)
+    exp.run()
+    print("Progress: %d/%d" % (i, num_experiments))
+
+Parallel(n_jobs=n_jobs)(delayed(create_and_run)(parameters, i) for i, parameters in enumerate(parameters_list))
