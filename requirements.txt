@@ -138,3 +138,4 @@ Werkzeug==1.0.1
 widgetsnbextension==3.5.1
 wrapt==1.12.1
 xlrd==2.0.1
+optuna~=2.5.0

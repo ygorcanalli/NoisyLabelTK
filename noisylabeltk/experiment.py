@@ -5,27 +5,30 @@ from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
 import neptune
-import datetime
-import numpy as np
-from neptunecontrib.monitoring.keras import NeptuneMonitor
+import optuna
+import neptunecontrib.monitoring.keras as neptune_keras
+import neptunecontrib.monitoring.optuna as neptune_optuna
 from git import Repo
 import io
 import os
 
+optuna.logging.set_verbosity(optuna.logging.WARN)
+
 class Experiment(object):
 
-    def __init__(self, parameters, project_name):
+    def __init__(self, parameters, project_name, tags):
 
         self.parameters = parameters
         self.name = "%s-%s-%s" % (
             self.parameters['dataset'], self.parameters['noise'], self.parameters['robust-method'])
 
         self.description = "Label Noise Robustness"
+        self.tags = tags
 
         neptune.init(project_qualified_name=project_name)
         self.exp = neptune.create_experiment(name=self.name,
                                              description=self.description,
-                                             tags=[self.parameters['dataset'], self.parameters['robust-method']],
+                                             tags=self.tags,
                                              params=parameters
                                              )
 
@@ -40,6 +43,19 @@ class Experiment(object):
         if 'loss_kwargs' in self.parameters and self.parameters is not None:
             for key, value in enumerate(self.parameters['loss_kwargs']):
                 self.exp.set_property('loss_arg_%s' % key, value)
+
+        if 'robust-method' in self.parameters and self.parameters['robust-method'] is not None and \
+                self.parameters['robust-method'] != 'none':
+            args = []
+            kwargs = {}
+            if 'loss-args' in self.parameters and self.parameters['loss-args'] is not None:
+                args = self.parameters['loss-args']
+            if 'loss-kwargs' in self.parameters and self.parameters['loss-kwargs'] is not None:
+                kwargs = self.parameters['loss-kwargs']
+
+            self.loss_function = make_loss(self.parameters['robust-method'], *args, **kwargs)
+        else:
+            self.loss_function = make_loss('cross-entropy')
 
         self.train = None
         self.validation = None
@@ -75,27 +91,14 @@ class Experiment(object):
         self.num_features = num_features
         self.num_classes = num_classes
 
-        self.exp.set_property('num_features', num_features)
-        self.exp.set_property('num_classes', num_classes)
+        self.exp.set_property('num-features', num_features)
+        self.exp.set_property('num-classes', num_classes)
 
     def _build_model(self):
 
-        if 'robust-method' in self.parameters and self.parameters['robust-method'] is not None and \
-                self.parameters['robust-method'] != 'none':
-            args = []
-            kwargs = {}
-            if 'loss-args' in self.parameters and self.parameters['loss-args'] is not None:
-                args = self.parameters['loss-args']
-            if 'loss-kwargs' in self.parameters and self.parameters['loss-kwargs'] is not None:
-                kwargs = self.parameters['loss-kwargs']
-
-            loss_function = make_loss(self.parameters['robust-method'], *args, **kwargs)
-        else:
-            loss_function = make_loss('cross-entropy')
-
-        self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes)
+        self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **(self.best_hyperparameters))
         self.model.compile(optimizer='adam',
-                           loss=loss_function,
+                           loss=self.loss_function,
                            metrics=['accuracy'])
 
         self.model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
@@ -103,7 +106,7 @@ class Experiment(object):
     def _fit_model(self):
         history = self.model.fit(self.train, epochs=10,
                                  validation_data=self.validation,
-                                 callbacks=[NeptuneMonitor()],
+                                 callbacks=[neptune_keras.NeptuneMonitor()],
                                  verbose=0)
 
     def _evaluate(self):
@@ -112,10 +115,44 @@ class Experiment(object):
         for j, metric in enumerate(eval_metrics):
             neptune.log_metric('eval_' + self.model.metrics_names[j], metric)
 
+        self.model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+
+    def _tune(self):
+
+        def objective(trial):
+            num_layers = trial.suggest_int("num_layers", self.parameters['hyperparameters-range']['num-layers']['min'], self.parameters['hyperparameters-range']['num-layers']['max'])
+
+            for i in range(num_layers):
+                trial.suggest_int("hidden_size_{}".format(i), self.parameters['hyperparameters-range']['hidden-size']['min'], self.parameters['hyperparameters-range']['hidden-size']['max'], log=True)
+
+            trial.suggest_float("dropout", self.parameters['hyperparameters-range']['dropout']['min'], self.parameters['hyperparameters-range']['dropout']['max'])
+            kwargs = trial.params
+            model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **kwargs)
+
+            model.compile(optimizer='adam',
+                               loss=self.loss_function,
+                               metrics=['accuracy'])
+
+            history = model.fit(self.train, epochs=10, verbose=0)
+
+            eval_metrics = model.evaluate(self.validation, verbose=0)
+
+            for j, metric in enumerate(eval_metrics):
+                if model.metrics_names[j] == 'accuracy':
+                    return metric
+
+        monitor = neptune_optuna.NeptuneCallback(experiment=self.exp)
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=50, callbacks=[monitor])
+
+        self.exp.set_property('best-hyperparameters', study.best_trial.params)
+        self.best_hyperparameters = study.best_trial.params
+
     def run(self):
         try:
             #print("[%s] Experiment is running!" % self.exp._id)
             self._load_data()
+            self._tune()
             self._build_model()
             self._fit_model()
             self._evaluate()

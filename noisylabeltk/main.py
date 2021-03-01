@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 #project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
 project_name = 'ygorcanalli/sandbox'
+tags = ['new_run']
 n_jobs = 8
 device = 'cpu'
 
@@ -36,10 +37,23 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 def create_and_run(parameters):
-    exp = Experiment(parameters, project_name)
+    exp = Experiment(parameters, project_name, tags)
     exp.run()
 
-
+hyperparameters_range = {
+    'num-layers': {
+        'min': 1,
+        'max': 3
+    },
+    'hidden-size': {
+        'min': 8,
+        'max': 128
+    },
+    'dropout': {
+        'min': 0,
+        'max': 0.2
+    }
+}
 
 batch_size_list = [32]
 epochs_list = [10]
@@ -58,7 +72,7 @@ transition_matrix_list.append([[0.8, 0.2],
                                [0.2, 0.8]])
 transition_matrix_list.append([[0.7, 0.3],
                                [0.2, 0.8]])
-transition_matrix_list.append([[0.2, 0.8],
+transition_matrix_list.append([[0.8, 0.2],
                                [0.3, 0.7]])
 transition_matrix_list.append([[0.7, 0.3],
                                [0.3, 0.7]])
@@ -102,7 +116,8 @@ for batch_size in batch_size_list:
                             'noise-args': noise_args,
                             'robust-method': robust_method,
                             'loss-args': loss_args,
-                            'loss-kwargs': loss_kwargs
+                            'loss-kwargs': loss_kwargs,
+                            'hyperparameters-range': hyperparameters_range
                         }
                         parameters_list.append(parameters)
 

@@ -3,15 +3,18 @@ import tensorflow as tf
 from tensorflow.keras import Sequential, regularizers
 from tensorflow.keras.layers import InputLayer, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Activation, BatchNormalization
 
-def simple_mlp_32_64(input_shape, num_classes):
-    model = Sequential(
-        [
-            InputLayer(input_shape=input_shape),
-            Dense(32, activation='relu'),
-            Dense(64,activation="relu"),
-            Dense(num_classes, activation="softmax")
-        ]
-    )
+def simple_mlp(input_shape, num_classes, *args, **kwargs):
+    num_layers = kwargs['num_layers']
+    dropout_rate = kwargs['dropout']
+    model = Sequential()
+
+    model.add(InputLayer(input_shape=input_shape))
+    model.add(Dropout(dropout_rate))
+
+    for i in range(num_layers):
+        model.add(Dense(kwargs['hidden_size_{}'.format(i)], activation='relu'))
+
+    model.add(Dense(num_classes, activation="softmax"))
     return model
 
 # Taken from: https://keras.io/examples/vision/mnist_convnet/
@@ -124,11 +127,11 @@ def vgg(ds_info):
 
 
 models = {
-    'simple-mlp': simple_mlp_32_64,
+    'simple-mlp': simple_mlp,
     'simple-conv': simple_conv_32_64
 }
 
-def create_model(model_name, input_shape, num_classes):
+def create_model(model_name, input_shape, num_classes, *args, **kwargs):
     model_function = models[model_name]
-    return model_function(input_shape, num_classes)
+    return model_function(input_shape, num_classes, *args, **kwargs)
 
