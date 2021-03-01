@@ -61,8 +61,11 @@ class DatasetLoader(object):
         noise_generator = build_noise_generator(noise_name, dataset['train']['labels'], *args)
         noisy_train_labels = noise_generator.generate_noisy_labels()
 
+        noise_generator = build_noise_generator(noise_name, dataset['validation']['labels'], *args)
+        noisy_validation_labels = noise_generator.generate_noisy_labels()
+
         train_ds = np_to_dataset(dataset['train']['features'], noisy_train_labels, batch_size=self.batch_size)
-        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'], batch_size=self.batch_size)
+        validation_ds = np_to_dataset(dataset['validation']['features'], noisy_validation_labels, batch_size=self.batch_size)
         test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'], batch_size=self.batch_size)
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
