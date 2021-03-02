@@ -1,4 +1,7 @@
-# %%
+from noisylabeltk.seed import ensure_seterministic, get_seed
+
+ensure_seterministic()
+
 import sys
 import traceback
 from noisylabeltk.datasets import DatasetLoader
@@ -6,6 +9,7 @@ from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
 import neptune
 import optuna
+from optuna.samplers import TPESampler
 import neptunecontrib.monitoring.keras as neptune_keras
 import neptunecontrib.monitoring.optuna as neptune_optuna
 from git import Repo
@@ -142,7 +146,8 @@ class Experiment(object):
                     return metric
 
         monitor = neptune_optuna.NeptuneCallback(experiment=self.exp)
-        study = optuna.create_study(direction='maximize')
+        sampler = TPESampler(seed=get_seed())  # Make the sampler behave in a deterministic way.
+        study = optuna.create_study(direction='maximize', sampler=sampler)
         study.optimize(objective, n_trials=50, callbacks=[monitor])
 
         self.exp.set_property('best-hyperparameters', study.best_trial.params)

@@ -1,4 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from noisylabeltk.seed import ensure_seterministic, get_seed
+
+ensure_seterministic()
+
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import pandas as pd
@@ -253,8 +256,8 @@ class DatasetLoader(object):
             ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
         ])
 
-        train, test = train_test_split(dataframe, test_size=0.2)
-        train, validation = train_test_split(train, test_size=0.2)
+        train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
+        train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
 
         ct.fit(train)
         train = ct.transform(train)
@@ -294,8 +297,8 @@ class DatasetLoader(object):
             ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
         ])
 
-        train, test = train_test_split(dataframe, test_size=0.2)
-        train, validation = train_test_split(train, test_size=0.2)
+        train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
+        train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
 
         ct.fit(train)
         train = ct.transform(train)
