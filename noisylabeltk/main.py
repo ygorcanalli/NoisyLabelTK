@@ -91,11 +91,11 @@ def main():
     #     robust_method_list.append(('forward', ([transition_matrix], {})))
     #     robust_method_list.append(('backward', ([transition_matrix], {})))
 
-    noise_list = [
-        # (noise, noise-args)
-        ('none', [])
-    ]
-
+    #noise_list = [
+    #    # (noise, noise-args)
+    #    ('none', [])
+    #]
+    noise_list = []
     noise_rate_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
     for noise_rate in noise_rate_list:
         noise_list.append(('uniform', [noise_rate]))
