@@ -46,6 +46,8 @@ def create_and_run(parameters):
 
 def main():
     hyperparameters_range = {
+        'num_trials': 50,
+        'num_epochs': 10,
         'num-layers': {
             'min': 1,
             'max': 3

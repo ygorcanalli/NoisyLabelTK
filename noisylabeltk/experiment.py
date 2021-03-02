@@ -137,7 +137,7 @@ class Experiment(object):
                                loss=self.loss_function,
                                metrics=['accuracy'])
 
-            history = model.fit(self.train, epochs=10, verbose=0)
+            history = model.fit(self.train, epochs=self.parameters['hyperparameters-range']['num_epochs'], verbose=0)
 
             eval_metrics = model.evaluate(self.validation, verbose=0)
 
@@ -148,7 +148,7 @@ class Experiment(object):
         monitor = neptune_optuna.NeptuneCallback(experiment=self.exp)
         sampler = TPESampler(seed=get_seed())  # Make the sampler behave in a deterministic way.
         study = optuna.create_study(direction='maximize', sampler=sampler)
-        study.optimize(objective, n_trials=50, callbacks=[monitor])
+        study.optimize(objective, n_trials=self.parameters['hyperparameters-range']['num_trials'], callbacks=[monitor])
 
         self.exp.set_property('best-hyperparameters', study.best_trial.params)
         self.best_hyperparameters = study.best_trial.params
