@@ -1,5 +1,7 @@
-import numpy as np
-import tensorflow as tf
+from noisylabeltk.seed import ensure_seterministic, get_seed
+
+ensure_seterministic()
+
 from tensorflow.keras import Sequential, regularizers
 from tensorflow.keras.layers import InputLayer, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Activation, BatchNormalization
 
@@ -9,7 +11,7 @@ def simple_mlp(input_shape, num_classes, *args, **kwargs):
     model = Sequential()
 
     model.add(InputLayer(input_shape=input_shape))
-    model.add(Dropout(dropout_rate))
+    model.add(Dropout(dropout_rate, seed=get_seed()))
 
     for i in range(num_layers):
         model.add(Dense(kwargs['hidden_size_{}'.format(i)], activation='relu'))
@@ -27,7 +29,7 @@ def simple_conv_32_64(input_shape, num_classes):
             Conv2D(64, kernel_size=(3, 3), activation="relu"),
             MaxPooling2D(pool_size=(2, 2)),
             Flatten(),
-            Dropout(0.5),
+            Dropout(0.5, seed=get_seed()),
             Dense(num_classes, activation="softmax"),
         ]
     )
@@ -45,7 +47,7 @@ def vgg(ds_info):
                         input_shape=input_shape,kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.3, seed=get_seed()))
 
     model.add(Conv2D(64, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
@@ -56,7 +58,7 @@ def vgg(ds_info):
     model.add(Conv2D(128, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.4, seed=get_seed()))
 
     model.add(Conv2D(128, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
@@ -67,12 +69,12 @@ def vgg(ds_info):
     model.add(Conv2D(256, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.4, seed=get_seed()))
 
     model.add(Conv2D(256, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.4, seed=get_seed()))
 
     model.add(Conv2D(256, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
@@ -84,43 +86,43 @@ def vgg(ds_info):
     model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.4, seed=get_seed()))
 
     model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
-
-    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-
-    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.4))
-
-    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.4, seed=get_seed()))
 
     model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.5))
+
+
+    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4, seed=get_seed()))
+
+    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4, seed=get_seed()))
+
+    model.add(Conv2D(512, (3, 3), padding='same',kernel_regularizer=regularizers.l2(weight_decay)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.5, seed=get_seed()))
 
     model.add(Flatten())
     model.add(Dense(512,kernel_regularizer=regularizers.l2(weight_decay)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.5, seed=get_seed()))
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
     return model

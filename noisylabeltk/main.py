@@ -1,3 +1,7 @@
+from noisylabeltk.seed import set_seed, get_seed
+
+set_seed(777)
+
 from noisylabeltk.experiment import Experiment
 from noisylabeltk.noise_generator import build_noise_generator
 import contextlib
@@ -129,7 +133,8 @@ def main():
                                 'robust-method': robust_method,
                                 'loss-args': loss_args,
                                 'loss-kwargs': loss_kwargs,
-                                'hyperparameters-range': hyperparameters_range
+                                'hyperparameters-range': hyperparameters_range,
+                                'seed': get_seed()
                             }
                             parameters_list.append(parameters)
 
