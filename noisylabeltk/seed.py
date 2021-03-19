@@ -2,6 +2,7 @@
 import os
 import random
 import numpy as np
+import time
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
@@ -9,6 +10,7 @@ def set_seed(seed_value):
 
     # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
     os.environ['PYTHONHASHSEED']=str(seed_value)
+    time.sleep(1)
     ensure_seterministic()
 
 def ensure_seterministic():
@@ -23,14 +25,10 @@ def ensure_seterministic():
     # 4. Set `tensorflow` pseudo-random generator at a fixed value
 
     tf.random.set_seed(seed_value)
-    # 5. For layers that introduce randomness like dropout, make sure to set seed values
-    #model.add(Dropout(0.25, seed=seed_value))
-    #6 Configure a new global `tensorflow` session
-
-    #session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-    #sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-    #K.set_session(sess)
 
 def get_seed():
     return int(os.environ['PYTHONHASHSEED'])
+
+def create_seed():
+    return np.random.randint(0, 1000)
 

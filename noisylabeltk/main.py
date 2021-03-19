@@ -1,9 +1,8 @@
-from noisylabeltk.seed import set_seed, get_seed
+from noisylabeltk.seed import create_seed, set_seed, get_seed
 
-set_seed(777)
+set_seed(62)
 
 from noisylabeltk.experiment import Experiment
-from noisylabeltk.noise_generator import build_noise_generator
 import contextlib
 import joblib
 from joblib import Parallel, delayed
@@ -11,8 +10,8 @@ import os
 from tqdm import tqdm
 
 project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
-# project_name = 'ygorcanalli/sandbox'
-tags = ['1-mar-00']
+#project_name = 'ygorcanalli/sandbox'
+tags = ["semdropout"]
 n_jobs = 8
 device = 'cpu'
 
@@ -58,13 +57,13 @@ def main():
         },
         'dropout': {
             'min': 0,
-            'max': 0.2
+            'max': 0
         }
     }
 
     batch_size_list = [32]
     epochs_list = [10]
-    dataset_list = ['german', 'breast-cancer']
+    dataset_list = ['breast-cancer', 'german']
     model_list = ['simple-mlp']
 
     # transition_matrix_list = []
@@ -102,7 +101,7 @@ def main():
     #    ('none', [])
     #]
     noise_list = []
-    noise_rate_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
+    noise_rate_list = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
     for noise_rate in noise_rate_list:
         noise_list.append(('uniform', [noise_rate]))
 
