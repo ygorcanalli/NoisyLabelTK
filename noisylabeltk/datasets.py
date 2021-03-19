@@ -13,7 +13,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from noisylabeltk.noise_generator import build_noise_generator
 
-BASE_PATH = "datasets"
+BASE_PATH = 'datasets'
 
 # A utility method to create a tf.data dataset from a Pandas Dataframe
 def df_to_dataset(dataframe, shuffle=True, batch_size=32):
@@ -44,7 +44,8 @@ class DatasetLoader(object):
         self.name =  name
         self.datasets = {
             'german': self.load_germancredit,
-            'breast-cancer': self.load_breastcancer
+            'breast-cancer': self.load_breastcancer,
+            'diabetes': self.load_diabetes
         }
         self.batch_size = batch_size
 
@@ -247,9 +248,6 @@ class DatasetLoader(object):
                               'numbermaintence']
         target_class = ['label']
 
-        # categorical_features = [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18, 19]
-        # numerical_features = [1, 4, 7, 10, 12, 15, 17]
-        # target_class = [20]
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
@@ -285,6 +283,7 @@ class DatasetLoader(object):
         }
 
         return dataset
+
     def load_breastcancer(self):
         breast_cancer = skds.load_breast_cancer(as_frame=True)
         dataframe = breast_cancer['frame']
@@ -327,3 +326,51 @@ class DatasetLoader(object):
         }
 
         return dataset
+
+    def load_diabetes(self):
+        path = os.path.join(BASE_PATH, 'diabetes', 'diabetes_data_upload.csv')
+
+        dataframe = pd.read_csv(path, delimiter=",")
+        categorical_features = ['Gender', 'Polyuria', 'Polydipsia', 'sudden weight loss',
+         'weakness', 'Polyphagia', 'Genital thrush', 'visual blurring',
+         'Itching', 'Irritability', 'delayed healing', 'partial paresis',
+         'muscle stiffness', 'Alopecia', 'Obesity']
+        numerical_features = ['Age']
+        target_class = ['class']
+
+        ct = ColumnTransformer([
+            ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
+            ("numerical", StandardScaler(), numerical_features),
+            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+        ])
+
+        train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
+        train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
+
+        ct.fit(train)
+        train = ct.transform(train)
+        validation = ct.transform(validation)
+        test = ct.transform(test)
+
+        num_classes = int(dataframe[target_class].nunique())
+        num_features = train.shape[1] - num_classes
+
+        dataset = {
+            'num_classes': num_classes,
+            'num_features': num_features,
+            'train': {
+                'features': train[:, :-num_classes],
+                'labels': train[:, -num_classes:]
+            },
+            'validation': {
+                'features': validation[:, :-num_classes],
+                'labels': validation[:, -num_classes:]
+            },
+            'test': {
+                'features': test[:, :-num_classes],
+                'labels': test[:, -num_classes:]
+            }
+        }
+
+        return dataset
+
