@@ -1,6 +1,6 @@
 from noisylabeltk.seed import create_seed, set_seed, get_seed
 
-set_seed(62)
+set_seed(321)
 
 from noisylabeltk.experiment import Experiment
 import contextlib
@@ -63,7 +63,7 @@ def main():
 
     batch_size_list = [32]
     epochs_list = [10]
-    dataset_list = ['breast-cancer', 'german']
+    dataset_list = ['breast-cancer', 'german', 'diabetes']
     model_list = ['simple-mlp']
 
     # transition_matrix_list = []
