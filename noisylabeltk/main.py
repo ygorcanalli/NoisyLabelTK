@@ -9,11 +9,11 @@ from joblib import Parallel, delayed
 import os
 from tqdm import tqdm
 
-project_name = 'ygorcanalli/LabelNoiseOnStructuredData'
+project_name = 'ygorcanalli/LabelNoise'
 #project_name = 'ygorcanalli/sandbox'
 tags = ["semdropout"]
-n_jobs = 8
-device = 'cpu'
+n_jobs = 1
+device = 'gpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -41,7 +41,7 @@ def tqdm_joblib(tqdm_object):
 
 def create_and_run(parameters):
     exp = Experiment(parameters, project_name, tags)
-    exp.run()
+    exp.execute()
 
 def main():
     hyperparameters_range = {
@@ -57,13 +57,13 @@ def main():
         },
         'dropout': {
             'min': 0,
-            'max': 0
+            'max': 0.2
         }
     }
 
-    batch_size_list = [32]
+    batch_size_list = [128]
     epochs_list = [10]
-    dataset_list = ['breast-cancer', 'german', 'diabetes']
+    dataset_list = ['synthetic-50-2-100K']
     model_list = ['simple-mlp']
 
     # transition_matrix_list = []
@@ -125,7 +125,7 @@ def main():
                                     loss_args = [transition_matrix]
 
                             parameters = {
-                                'batch_size': batch_size,
+                                'batch-size': batch_size,
                                 'epochs': epochs,
                                 'dataset': dataset,
                                 'model': model,

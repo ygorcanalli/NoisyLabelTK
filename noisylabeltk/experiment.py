@@ -7,14 +7,11 @@ import traceback
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
-import neptune
+import neptune.new as neptune
 import optuna
 from optuna.samplers import TPESampler
-import neptunecontrib.monitoring.keras as neptune_keras
-import neptunecontrib.monitoring.optuna as neptune_optuna
-from git import Repo
-import io
-import os
+from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
+from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
 
 optuna.logging.set_verbosity(optuna.logging.WARN)
 
@@ -23,30 +20,24 @@ class Experiment(object):
     def __init__(self, parameters, project_name, tags):
 
         self.parameters = parameters
-        self.name = "%s-%s-%s" % (
-            self.parameters['dataset'], self.parameters['noise'], self.parameters['robust-method'])
-
-        self.description = "Label Noise Robustness"
+        self.name = "%s-%s-%s" % ( self.parameters['dataset'], self.parameters['noise'], self.parameters['robust-method'])
         self.tags = tags
 
-        neptune.init(project_qualified_name=project_name)
-        self.exp = neptune.create_experiment(name=self.name,
-                                             description=self.description,
-                                             tags=self.tags,
-                                             params=parameters
-                                             )
+        self.run = neptune.init(project=project_name, name=self.name)
+        self.run["model/params"] = parameters
 
         if 'noise_args' in self.parameters and self.parameters is not None:
             for i, arg in enumerate(self.parameters['noise_args']):
-                self.exp.set_property('noise_arg_%d' % i, arg)
+                self.run['parameters/noise_arg_%d' % i] = arg
 
         if 'loss_args' in self.parameters and self.parameters is not None:
             for i, arg in enumerate(self.parameters['loss_args']):
-                self.exp.set_property('loss_arg_%d' % i, arg)
+                self.run['parameters/loss_arg_%d' % i] = arg
 
         if 'loss_kwargs' in self.parameters and self.parameters is not None:
             for key, value in enumerate(self.parameters['loss_kwargs']):
-                self.exp.set_property('loss_arg_%s' % key, value)
+                self.run['parameters/loss_arg_%d' % key] = value
+
 
         if 'robust-method' in self.parameters and self.parameters['robust-method'] is not None and \
                 self.parameters['robust-method'] != 'none':
@@ -67,17 +58,10 @@ class Experiment(object):
         self.num_features = None
         self.num_classes = None
 
-        repo = Repo(os.getcwd())
-        t = repo.head.commit.tree
-        diff_string = repo.git.diff(t)
-        data_io = io.StringIO(diff_string)
-
-        self.exp.log_artifact(data_io, destination='git_diff.txt')
-        data_io.close()
 
     def _load_data(self):
 
-        dataset_loader = DatasetLoader(self.parameters['dataset'], self.parameters['batch_size'])
+        dataset_loader = DatasetLoader(self.parameters['dataset'], self.parameters['batch-size'])
 
         if 'noise' in self.parameters and self.parameters['noise'] is not None and \
                 self.parameters['noise'] != 'none':
@@ -95,8 +79,8 @@ class Experiment(object):
         self.num_features = num_features
         self.num_classes = num_classes
 
-        self.exp.set_property('num-features', num_features)
-        self.exp.set_property('num-classes', num_classes)
+        self.run['parameters/num-features'] = num_features
+        self.run['parameters/num-classes'] = num_classes
 
     def _build_model(self):
 
@@ -105,21 +89,20 @@ class Experiment(object):
                            loss=self.loss_function,
                            metrics=['accuracy'])
 
-        self.model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+        self.model.summary(print_fn=lambda x: self.run['model_summary'].log(x))
 
     def _fit_model(self):
+        neptune_cbk = NeptuneKerasCallback(run=self.run, base_namespace='metrics')
         history = self.model.fit(self.train, epochs=10,
                                  validation_data=self.validation,
-                                 callbacks=[neptune_keras.NeptuneMonitor()],
-                                 verbose=0)
+                                 callbacks=[neptune_cbk],
+                                 verbose=1)
 
     def _evaluate(self):
         eval_metrics = self.model.evaluate(self.test, verbose=0)
 
         for j, metric in enumerate(eval_metrics):
-            neptune.log_metric('eval_' + self.model.metrics_names[j], metric)
-
-        self.model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+            self.run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
 
     def _tune(self):
 
@@ -145,30 +128,19 @@ class Experiment(object):
                 if model.metrics_names[j] == 'accuracy':
                     return metric
 
-        monitor = neptune_optuna.NeptuneCallback(experiment=self.exp)
+        #monitor = NeptuneOptunaCallback(experiment=self.run)
         sampler = TPESampler(seed=get_seed())  # Make the sampler behave in a deterministic way.
         study = optuna.create_study(direction='maximize', sampler=sampler)
-        study.optimize(objective, n_trials=self.parameters['hyperparameters-range']['num_trials'], callbacks=[monitor])
+        study.optimize(objective, n_trials=self.parameters['hyperparameters-range']['num_trials'])
 
-        self.exp.set_property('best-hyperparameters', study.best_trial.params)
+        self.run['parameters/best-hyperparameters'] = study.best_trial.params
         self.best_hyperparameters = study.best_trial.params
 
-    def run(self):
-        try:
-            #print("[%s] Experiment is running!" % self.exp._id)
-            self._load_data()
-            self._tune()
-            self._build_model()
-            self._fit_model()
-            self._evaluate()
-        except Exception as ex:
-            try:
-                exc_info = sys.exc_info()
-            finally:
-                # Display the *original* exception
-                traceback.print_exception(*exc_info)
-                self.exp.stop('\n'.join(traceback.format_exception(*exc_info)))
-                del exc_info
-        else:
-            self.exp.stop()
-            #print("[%s] Experiment is finished!" % self.exp.id)
+    def execute(self):
+        self._load_data()
+        self._tune()
+        self._build_model()
+        self._fit_model()
+        self._evaluate()
+        self.run.stop()
+
