@@ -1,8 +1,3 @@
-from noisylabeltk.seed import ensure_seterministic
-
-ensure_seterministic()
-
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K

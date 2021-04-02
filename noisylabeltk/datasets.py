@@ -1,6 +1,6 @@
-from noisylabeltk.seed import ensure_seterministic, get_seed
+from noisylabeltk.util import set_seed, get_seed
 
-ensure_seterministic()
+set_seed(777)
 
 import tensorflow as tf
 import tensorflow_datasets as tfds

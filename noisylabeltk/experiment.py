@@ -1,9 +1,9 @@
 #from noisylabeltk.seed import ensure_seterministic, get_seed
 from tensorflow.keras.losses import categorical_crossentropy
+from util import tqdm_joblib
 
-
-import sys
-import traceback
+from joblib import Parallel, delayed
+from tqdm import tqdm
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
@@ -12,8 +12,6 @@ import optuna
 from optuna.samplers import TPESampler
 from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
 from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
-
-#optuna.logging.set_verbosity(optuna.logging.WARN)
 
 class ExperimentBundle(object):
 
@@ -110,9 +108,11 @@ class ExperimentBundle(object):
     def run_bundle(self):
         self._load_data()
         self._tune()
-        for robust_method in self.robust_method_list:
-            self._run(robust_method['name'], robust_method['args'], robust_method['kwargs'])
-
+        num_experiments = len(self.robust_method_list)
+        with tqdm_joblib(tqdm(desc="%s progress" % self.project_name, total=num_experiments)) as progress_bar:
+            Parallel(n_jobs=8)(delayed(self._run)\
+                                   (robust_method['name'], robust_method['args'], robust_method['kwargs']) \
+                               for robust_method in self.robust_method_list)
 
 class Experiment(object):
 

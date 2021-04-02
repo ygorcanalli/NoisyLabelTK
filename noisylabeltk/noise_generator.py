@@ -1,7 +1,3 @@
-from noisylabeltk.seed import ensure_seterministic
-
-ensure_seterministic()
-
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
