@@ -96,7 +96,7 @@ class Experiment(object):
         history = self.model.fit(self.train, epochs=10,
                                  validation_data=self.validation,
                                  callbacks=[neptune_cbk],
-                                 verbose=1)
+                                 verbose=0)
 
     def _evaluate(self):
         eval_metrics = self.model.evaluate(self.test, verbose=0)

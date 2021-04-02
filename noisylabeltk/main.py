@@ -12,8 +12,8 @@ from tqdm import tqdm
 project_name = 'ygorcanalli/LabelNoise'
 #project_name = 'ygorcanalli/sandbox'
 tags = ["semdropout"]
-n_jobs = 1
-device = 'gpu'
+n_jobs = 8
+device = 'cpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -45,7 +45,7 @@ def create_and_run(parameters):
 
 def main():
     hyperparameters_range = {
-        'num_trials': 50,
+        'num_trials': 10,
         'num_epochs': 10,
         'num-layers': {
             'min': 1,
