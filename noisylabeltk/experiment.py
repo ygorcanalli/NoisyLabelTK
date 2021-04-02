@@ -39,7 +39,7 @@ class ExperimentBundle(object):
         self.num_features = None
         self.num_classes = None
         self.best_hyperparameters = None
-
+        self.experiment_name = "%s-%s-%s" % (self.dataset_name, self.noise_name, str(self.noise_args))
     # TODO track hyperparameters tunning
     def _tune(self):
 
@@ -102,7 +102,7 @@ class ExperimentBundle(object):
             'loss-kwargs': loss_kwargs,
         }
 
-        exp = Experiment(self.num_features, self.num_classes, parameters, self.project_name)
+        exp = Experiment(self.num_features, self.num_classes, parameters, self.project_name, self.experiment_name)
         exp.build_model(self.best_hyperparameters)
         exp.fit_model(self.train, self.validation)
         exp.evaluate(self.test)
@@ -116,11 +116,11 @@ class ExperimentBundle(object):
 
 class Experiment(object):
 
-    def __init__(self, num_features, num_classes, parameters, project_name):
+    def __init__(self, num_features, num_classes, parameters, project_name, experiment_name):
 
         self.parameters = parameters
         self.project_name = project_name
-        self.name = "%s-%s-%s" % (self.parameters['dataset'], self.parameters['noise'], self.parameters['robust-method'])
+        self.name = experiment_name
 
         if 'noise_args' in self.parameters and self.parameters is not None:
             for i, arg in enumerate(self.parameters['noise-args']):

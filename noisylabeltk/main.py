@@ -57,7 +57,7 @@ def main():
     }
 
     batch_size_list = [128]
-    epochs_list = [10]
+    epochs_list = [20]
     dataset_list = ['synthetic-50-2-100K']
     model_list = ['simple-mlp']
 
@@ -106,7 +106,7 @@ def main():
                         robust_methods_list = []
                         for robust_method_name in robust_methods:
                             robust_method = {'name': robust_method_name, 'kwargs': None, 'args': None}
-                            if robust_method_name == 'forward' or robust_method == 'backward':
+                            if robust_method_name == 'forward' or robust_method_name == 'backward':
                                 noise_rate = noise_args[0]
                                 transition_matrix = [[1-noise_rate, noise_rate],
                                                      [noise_rate, 1-noise_rate]]
