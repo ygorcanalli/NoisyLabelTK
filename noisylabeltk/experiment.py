@@ -108,11 +108,8 @@ class ExperimentBundle(object):
     def run_bundle(self):
         self._load_data()
         self._tune()
-        num_experiments = len(self.robust_method_list)
-        with tqdm_joblib(tqdm(desc="%s progress" % self.project_name, total=num_experiments)) as progress_bar:
-            Parallel(n_jobs=8)(delayed(self._run)\
-                                   (robust_method['name'], robust_method['args'], robust_method['kwargs']) \
-                               for robust_method in self.robust_method_list)
+        for robust_method in self.robust_method_list:
+            self._run(robust_method['name'], robust_method['args'], robust_method['kwargs'])
 
 class Experiment(object):
 
