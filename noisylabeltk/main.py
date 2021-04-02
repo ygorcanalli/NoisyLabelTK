@@ -2,7 +2,7 @@ from noisylabeltk.seed import create_seed, set_seed, get_seed
 
 set_seed(321)
 
-from noisylabeltk.experiment import Experiment
+from noisylabeltk.experiment import ExperimentBundle
 import contextlib
 import joblib
 from joblib import Parallel, delayed
@@ -38,15 +38,10 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
 
-
-def create_and_run(parameters):
-    exp = Experiment(parameters, project_name, tags)
-    exp.execute()
-
 def main():
+    hyperparameters_trials = 10
+    hyperparameters_epochs = 10
     hyperparameters_range = {
-        'num_trials': 10,
-        'num_epochs': 10,
         'num-layers': {
             'min': 1,
             'max': 3
@@ -83,14 +78,7 @@ def main():
     # transition_matrix_list.append([[0.7, 0.3],
     #                                [0.3, 0.7]])
 
-    robust_method_list = [
-        # (robust-method,  (loss-args, loss-kwargs))
-        ('none', ([], {})),
-        ('boot-soft', ([], {})),
-        ('boot-hard', ([], {})),
-        ('forward', ([], {})),
-        ('backward', ([], {}))
-    ]
+    robust_methods = ['none', 'boot-soft', 'boot-hard', 'forward', 'backward']
 
     # for transition_matrix in transition_matrix_list:
     #     robust_method_list.append(('forward', ([transition_matrix], {})))
@@ -114,35 +102,29 @@ def main():
             for dataset in dataset_list:
                 for model in model_list:
                     for noise, noise_args in noise_list:
-                        for robust_method, (loss_args, loss_kwargs) in robust_method_list:
-                            if (robust_method == 'forward' or robust_method == 'backward') and not loss_args:
-                                if noise == 'pairwise':
-                                    loss_args = noise_args
-                                elif noise == 'uniform':
-                                    noise_rate = noise_args[0]
-                                    transition_matrix = [[1-noise_rate, noise_rate],
-                                                         [noise_rate, 1-noise_rate]]
-                                    loss_args = [transition_matrix]
 
-                            parameters = {
-                                'batch-size': batch_size,
-                                'epochs': epochs,
-                                'dataset': dataset,
-                                'model': model,
-                                'noise': noise,
-                                'noise-args': noise_args,
-                                'robust-method': robust_method,
-                                'loss-args': loss_args,
-                                'loss-kwargs': loss_kwargs,
-                                'hyperparameters-range': hyperparameters_range,
-                                'seed': get_seed()
-                            }
-                            parameters_list.append(parameters)
+                        robust_methods_list = []
+                        for robust_method_name in robust_methods:
+                            robust_method = {'name': robust_method_name, 'kwargs': None, 'args': None}
+                            if robust_method_name == 'forward' or robust_method == 'backward':
+                                noise_rate = noise_args[0]
+                                transition_matrix = [[1-noise_rate, noise_rate],
+                                                     [noise_rate, 1-noise_rate]]
+                                robust_method['args'] = [transition_matrix]
+                            robust_methods_list.append(robust_method)
 
+                        exp_bundle = ExperimentBundle(dataset, model, batch_size, epochs, \
+                                                      robust_methods_list, \
+                                                      project_name, noise, noise_args, \
+                                                      hyperparameters_range, hyperparameters_trials, \
+                                                      hyperparameters_epochs)
+                        exp_bundle.run_bundle()
+
+"""
     num_experiments = len(parameters_list)
 
     with tqdm_joblib(tqdm(desc="%s progress" % project_name, total=num_experiments)) as progress_bar:
         Parallel(n_jobs=n_jobs)(delayed(create_and_run)(parameters) for parameters in parameters_list)
-
+"""
 if __name__ == "__main__":
     main()

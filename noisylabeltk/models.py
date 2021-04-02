@@ -1,7 +1,3 @@
-from noisylabeltk.seed import ensure_seterministic, get_seed
-
-ensure_seterministic()
-
 from tensorflow.keras import Sequential, regularizers
 from tensorflow.keras.layers import InputLayer, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Activation, BatchNormalization
 
@@ -11,7 +7,7 @@ def simple_mlp(input_shape, num_classes, *args, **kwargs):
     model = Sequential()
 
     model.add(InputLayer(input_shape=input_shape))
-    model.add(Dropout(dropout_rate, seed=get_seed()))
+    model.add(Dropout(dropout_rate))
 
     for i in range(num_layers):
         model.add(Dense(kwargs['hidden_size_{}'.format(i)], activation='relu'))
