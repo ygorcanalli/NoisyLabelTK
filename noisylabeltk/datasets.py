@@ -46,7 +46,9 @@ class DatasetLoader(object):
             'german': self.load_germancredit,
             'breast-cancer': self.load_breastcancer,
             'diabetes': self.load_diabetes,
-            'synthetic-50-2-100K': self.load_synthetic_50_2_100K
+            'synthetic-50-2-100K': self.load_synthetic_50_2_100K,
+            'synthetic-100-5-500K': self.load_synthetic_100_5_500K,
+            'synthetic-80-5-200K': self.load_synthetic_80_5_200K,
         }
         self.batch_size = batch_size
 
@@ -277,6 +279,94 @@ class DatasetLoader(object):
         }
 
         return dataset
+
+    def load_synthetic_100_5_500K(self):
+        path = os.path.join(BASE_PATH, 'synthetic_100_5_500K', 'data.csv')
+
+        dataframe = pd.read_csv(path, delimiter=',')
+
+        numerical_features = ["f%d" % x for x in range(100)]
+        target_class = ['class']
+
+        ct = ColumnTransformer([
+            ("numerical", StandardScaler(), numerical_features),
+            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+        ])
+
+        train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
+        train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
+
+        ct.fit(train)
+        train = ct.transform(train)
+        validation = ct.transform(validation)
+        test = ct.transform(test)
+
+        num_classes = int(dataframe[target_class].nunique())
+        num_features = train.shape[1] - num_classes
+
+        dataset = {
+            'num_classes': num_classes,
+            'num_features': num_features,
+            'train': {
+                'features': train[:, :-num_classes],
+                'labels': train[:, -num_classes:]
+            },
+            'validation': {
+                'features': validation[:, :-num_classes],
+                'labels': validation[:, -num_classes:]
+            },
+            'test': {
+                'features': test[:, :-num_classes],
+                'labels': test[:, -num_classes:]
+            }
+        }
+
+        return dataset
+
+    def load_synthetic_80_5_200K(self):
+        path = os.path.join(BASE_PATH, 'synthetic_80_5_200K', 'data.csv')
+
+        dataframe = pd.read_csv(path, delimiter=',')
+
+        numerical_features = ["f%d" % x for x in range(80)]
+        target_class = ['class']
+
+        ct = ColumnTransformer([
+            ("numerical", StandardScaler(), numerical_features),
+            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+        ])
+
+        train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
+        train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
+
+        ct.fit(train)
+        train = ct.transform(train)
+        validation = ct.transform(validation)
+        test = ct.transform(test)
+
+        num_classes = int(dataframe[target_class].nunique())
+        num_features = train.shape[1] - num_classes
+
+        dataset = {
+            'num_classes': num_classes,
+            'num_features': num_features,
+            'train': {
+                'features': train[:, :-num_classes],
+                'labels': train[:, -num_classes:]
+            },
+            'validation': {
+                'features': validation[:, :-num_classes],
+                'labels': validation[:, -num_classes:]
+            },
+            'test': {
+                'features': test[:, :-num_classes],
+                'labels': test[:, -num_classes:]
+            }
+        }
+
+        return dataset
+
+
     # TODO: migrate german loader to numpy
     def load_germancredit(self):
         path = os.path.join(BASE_PATH, 'german_credit', 'german.data')

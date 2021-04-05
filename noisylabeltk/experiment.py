@@ -1,9 +1,5 @@
 #from noisylabeltk.seed import ensure_seterministic, get_seed
 from tensorflow.keras.losses import categorical_crossentropy
-from util import tqdm_joblib
-
-from joblib import Parallel, delayed
-from tqdm import tqdm
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
 import noisylabeltk.models as models
