@@ -66,6 +66,7 @@ class ExperimentBundle(object):
         study.optimize(objective, n_trials=self.num_trials)
 
         self.best_hyperparameters = study.best_trial.params
+        return study.best_trial.params
 
     def _load_data(self):
 
@@ -101,11 +102,15 @@ class ExperimentBundle(object):
         exp.fit_model(self.train, self.validation)
         exp.evaluate(self.test)
 
-    def run_bundle(self):
+    def run_bundle(self, hyperparameters=None):
         self._load_data()
-        self._tune()
+        if hyperparameters is None:
+            best_hyperparameters = self._tune()
+        else:
+            self.best_hyperparameters = hyperparameters
         for robust_method in self.robust_method_list:
             self._run(robust_method['name'], robust_method['args'], robust_method['kwargs'])
+        return best_hyperparameters
 
 class Experiment(object):
 
