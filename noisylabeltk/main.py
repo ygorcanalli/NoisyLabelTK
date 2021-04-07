@@ -7,8 +7,8 @@ import numpy as np
 
 import os
 
-project_name = 'ygorcanalli/LabelNoise'
-n_jobs = 1
+project_name = 'ygorcanalli/sandbox'
+n_jobs = 4
 device = 'cpu'
 
 if device == 'cpu':
@@ -30,7 +30,7 @@ def get_uniform_transition_matrix(dataset, rate):
     return T
 
 def main():
-    hyperparameters_trials = 10
+    hyperparameters_trials = 50
     hyperparameters_epochs = 10
     hyperparameters_range = {
         'num-layers': {
@@ -38,18 +38,23 @@ def main():
             'max': 3
         },
         'hidden-size': {
-            'min': 8,
+            'min': 32,
             'max': 128
         },
         'dropout': {
-            'min': 0,
+            'min': 0.05,
             'max': 0.2
+        },
+        'search-space': {
+            'num-layers': [1, 2, 3],
+            'hidden-size': [32, 64, 128],
+            'dropout': [0.05, 0.1, 0.15, 0.2]
         }
     }
 
     batch_size_list = [32]
     epochs_list = [20]
-    dataset_list = ['synthetic-50-2-100K', 'synthetic-80-5-200K', 'synthetic-100-5-500K']
+    dataset_list = ['synthetic-50-2-100K']
     model_list = ['simple-mlp']
 
     robust_methods = ['none', 'boot-soft', 'boot-hard', 'forward', 'backward']
@@ -63,7 +68,7 @@ def main():
     exp_bundles = []
 
     for dataset in dataset_list:
-        best_hyperparameters = None
+        #best_hyperparameters = None
         for batch_size in batch_size_list:
             for epochs in epochs_list:
                 for model in model_list:
@@ -83,11 +88,11 @@ def main():
                                                       project_name, noise, noise_args, \
                                                       hyperparameters_range, hyperparameters_trials, \
                                                       hyperparameters_epochs)
-                        if best_hyperparameters is None:
-                            best_hyperparameters = exp_bundle.run_bundle()
-                        else:
-                            exp_bundle.run_bundle(best_hyperparameters)
-
+                        #if best_hyperparameters is None:
+                        #    best_hyperparameters = exp_bundle.run_bundle()
+                        #else:
+                        #    exp_bundle.run_bundle(best_hyperparameters)
+                        exp_bundles.append(exp_bundle)
     num_experiments = len(exp_bundles)
 
     with tqdm_joblib(tqdm(desc="%s progress" % project_name, total=num_experiments)) as progress_bar:

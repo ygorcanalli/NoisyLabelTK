@@ -2,7 +2,7 @@ from tensorflow.keras import Sequential, regularizers
 from tensorflow.keras.layers import InputLayer, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Activation, BatchNormalization
 
 def simple_mlp(input_shape, num_classes, *args, **kwargs):
-    num_layers = kwargs['num_layers']
+    num_layers = kwargs['num-layers']
     dropout_rate = kwargs['dropout']
     model = Sequential()
 
@@ -10,7 +10,7 @@ def simple_mlp(input_shape, num_classes, *args, **kwargs):
     model.add(Dropout(dropout_rate))
 
     for i in range(num_layers):
-        model.add(Dense(kwargs['hidden_size_{}'.format(i)], activation='relu'))
+        model.add(Dense(kwargs['hidden-size'], activation='relu'))
 
     model.add(Dense(num_classes, activation="softmax"))
     return model

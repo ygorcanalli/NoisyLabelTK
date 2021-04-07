@@ -1,4 +1,4 @@
-#from noisylabeltk.seed import ensure_seterministic, get_seed
+# from noisylabeltk.seed import ensure_seterministic, get_seed
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
@@ -8,6 +8,7 @@ import optuna
 from optuna.samplers import TPESampler
 from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
 from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
+
 
 class ExperimentBundle(object):
 
@@ -34,15 +35,16 @@ class ExperimentBundle(object):
         self.num_classes = None
         self.best_hyperparameters = None
         self.experiment_name = "%s-%s-%s" % (self.dataset_name, self.noise_name, str(self.noise_args))
+
     # TODO track hyperparameters tunning
     def _tune(self):
 
         def objective(trial):
-            num_layers = trial.suggest_int("num_layers", self.hyperparameters_range['num-layers']['min'],\
+            num_layers = trial.suggest_int("num-layers", self.hyperparameters_range['num-layers']['min'], \
                                            self.hyperparameters_range['num-layers']['max'])
 
             for i in range(num_layers):
-                trial.suggest_int("hidden_size_{}".format(i), self.hyperparameters_range['hidden-size']['min'], \
+                trial.suggest_int("hidden-size-{}".format(i), self.hyperparameters_range['hidden-size']['min'], \
                                   self.hyperparameters_range['hidden-size']['max'], log=True)
 
             trial.suggest_float("dropout", self.hyperparameters_range['dropout']['min'], \
@@ -51,8 +53,8 @@ class ExperimentBundle(object):
             model = models.create_model(self.model_name, self.num_features, self.num_classes, **kwargs)
 
             model.compile(optimizer='adam',
-                               loss=categorical_crossentropy,
-                               metrics=['accuracy'])
+                          loss=categorical_crossentropy,
+                          metrics=['accuracy'])
 
             history = model.fit(self.train, epochs=self.trial_epochs, verbose=0)
 
@@ -65,7 +67,6 @@ class ExperimentBundle(object):
         study = optuna.create_study(direction='maximize')
         study.optimize(objective, n_trials=self.num_trials)
 
-        self.best_hyperparameters = study.best_trial.params
         return study.best_trial.params
 
     def _load_data(self):
@@ -73,7 +74,8 @@ class ExperimentBundle(object):
         dataset_loader = DatasetLoader(self.dataset_name, self.batch_size)
 
         if self.noise_name is not None and self.noise_name != 'none' and self.noise_args is not None:
-            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(self.noise_name, *(self.noise_args))
+            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(
+                self.noise_name, *(self.noise_args))
         else:
             (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.load()
 
@@ -98,19 +100,21 @@ class ExperimentBundle(object):
         }
 
         exp = Experiment(self.num_features, self.num_classes, parameters, self.project_name, self.experiment_name)
-        exp.build_model(self.best_hyperparameters)
+        exp.tune(self.hyperparameters_range, self.trial_epochs, self.num_trials, self.train, self.validation)
+        exp.build_model()
         exp.fit_model(self.train, self.validation)
         exp.evaluate(self.test)
 
     def run_bundle(self, hyperparameters=None):
         self._load_data()
-        if hyperparameters is None:
-            best_hyperparameters = self._tune()
-        else:
-            self.best_hyperparameters = hyperparameters
+        # if hyperparameters is None:
+        #    self.best_hyperparameters = self._tune()
+        # else:
+        #    self.best_hyperparameters = hyperparameters
         for robust_method in self.robust_method_list:
             self._run(robust_method['name'], robust_method['args'], robust_method['kwargs'])
-        return best_hyperparameters
+        # return self.best_hyperparameters
+
 
 class Experiment(object):
 
@@ -149,15 +153,17 @@ class Experiment(object):
         self.num_classes = num_classes
         self.run = None
         self.model = None
+        self.best_hyperparameters = None
 
-    def build_model(self, hyperparameters):
+    def build_model(self):
 
         if self.run is None:
             self._init_tracking()
 
-        self.run['parameters/hyperparameters'] = hyperparameters
+        self.run['parameters/hyperparameters'] = self.best_hyperparameters
 
-        self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
+        self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, \
+                                         **self.best_hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
                            metrics=['accuracy'])
@@ -188,3 +194,36 @@ class Experiment(object):
 
     def _stop_tracking(self):
         self.run.stop()
+
+    def tune(self, hyperparameters_range, trial_epochs, num_trials, train, validation):
+
+        def objective(trial):
+            num_layers = trial.suggest_int("num-layers", hyperparameters_range['num-layers']['min'], \
+                                           hyperparameters_range['num-layers']['max'])
+
+            for i in range(num_layers):
+                trial.suggest_int("hidden-size", hyperparameters_range['hidden-size']['min'], \
+                                  hyperparameters_range['hidden-size']['max'], log=True)
+
+            trial.suggest_float("dropout", hyperparameters_range['dropout']['min'], \
+                                hyperparameters_range['dropout']['max'])
+            kwargs = trial.params
+            model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **kwargs)
+
+            model.compile(optimizer='adam',
+                          loss=categorical_crossentropy,
+                          metrics=['accuracy'])
+
+            history = model.fit(train, epochs=trial_epochs, verbose=0)
+
+            eval_metrics = model.evaluate(validation, verbose=0)
+
+            for j, metric in enumerate(eval_metrics):
+                if model.metrics_names[j] == 'accuracy':
+                    return metric
+
+        study = optuna.create_study(sampler=optuna.samplers.GridSampler(hyperparameters_range['search-space']), \
+                                    direction='maximize')
+        study.optimize(objective, n_trials=num_trials)
+
+        self.best_hyperparameters = study.best_trial.params
