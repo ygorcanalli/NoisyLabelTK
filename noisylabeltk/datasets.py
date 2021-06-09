@@ -43,6 +43,7 @@ class DatasetLoader(object):
     def __init__(self, name, batch_size):
         self.name =  name
         self.datasets = {
+            'income': self.load_income,
             'german': self.load_germancredit,
             'breast-cancer': self.load_breastcancer,
             'diabetes': self.load_diabetes,
@@ -377,19 +378,27 @@ class DatasetLoader(object):
 
         dataframe = pd.read_csv(path, names=column_names, delim_whitespace=True)
         categorical_features = ['status', 'history', 'purpose', 'savings', 'employmentsince', 'personalstatus',
-                                'garantors', 'property', 'othereinstallments', 'housing', 'job', 'telephone', 'foreign']
+                                'garantors', 'property', 'othereinstallments', 'housing', 'job', 'telephone']
         numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'age', 'existingcredits',
                               'numbermaintence']
+
+        sensitive_features = ['foreign']
+
         target_class = ['label']
 
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
+            ("sensitive_onehot", OneHotEncoder(handle_unknown='ignore'), sensitive_features),
             ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
         ])
 
         train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
         train, validation = train_test_split(train, test_size=0.2, random_state=get_seed())
+
+        train_sensitive = train[sensitive_features]
+        validation_sensitive = validation[sensitive_features]
+        test_sensitive = test[sensitive_features]
 
         ct.fit(train)
         train = ct.transform(train)
@@ -404,16 +413,86 @@ class DatasetLoader(object):
             'num_features': num_features,
             'train': {
                 'features': train[:, :-num_classes],
-                'labels': train[:, -num_classes:]
+                'labels': train[:, -num_classes:],
+                'sensitive': train_sensitive
             },
             'validation': {
                 'features': validation[:, :-num_classes],
-                'labels': validation[:, -num_classes:]
+                'labels': validation[:, -num_classes:],
+                'sensitive': validation_sensitive
             },
             'test': {
                 'features': test[:, :-num_classes],
-                'labels': test[:, -num_classes:]
-            }
+                'labels': test[:, -num_classes:],
+                'sensitive': test_sensitive
+            },
+            'sensitive_positive_value': 'A202' # not foreign worker
+        }
+
+        return dataset
+
+    def load_income(self):
+        train_path = os.path.join(BASE_PATH, 'income', 'adult.data')
+        test_path = os.path.join(BASE_PATH, 'income', 'adult.test')
+
+        column_names = ['age', 'workclass', 'fnlwgt', 'education',
+                        'education-num', 'marital-status', 'occupation',
+                        'relationship', 'race', 'sex', 'capital-gain',
+                        'capital-loss', 'hours-per-week', 'native-country', 'label']
+
+        categorical_features = ['workclass', 'education', 'marital-status',
+                                'occupation', 'relationship', 'race',
+                                'native-country']
+        numerical_features = ['age', 'fnlwgt', 'education-num', 'capital-gain',
+                              'capital-loss', 'hours-per-week']
+
+        sensitive_features = ['sex']
+
+        target_class = ['label']
+
+        train_dataframe = pd.read_csv(train_path, names=column_names, sep=', ')
+        test = pd.read_csv(test_path, names=column_names, sep=', ')
+
+        ct = ColumnTransformer([
+            ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
+            ("numerical", StandardScaler(), numerical_features),
+            ("sensitive_onehot", OneHotEncoder(handle_unknown='ignore'), sensitive_features),
+            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+        ])
+
+        train, validation = train_test_split(train_dataframe, test_size=0.2, random_state=get_seed())
+
+        train_sensitive = train[sensitive_features]
+        validation_sensitive = validation[sensitive_features]
+        test_sensitive = test[sensitive_features]
+
+        ct.fit(train)
+        train = ct.transform(train).todense()
+        validation = ct.transform(validation).todense()
+        test = ct.transform(test).todense()
+
+        num_classes = int(train_dataframe[target_class].nunique())
+        num_features = train.shape[1] - num_classes
+
+        dataset = {
+            'num_classes': num_classes,
+            'num_features': num_features,
+            'train': {
+                'features': train[:, :-num_classes],
+                'labels': train[:, -num_classes:],
+                'sensitive': train_sensitive
+            },
+            'validation': {
+                'features': validation[:, :-num_classes],
+                'labels': validation[:, -num_classes:],
+                'sensitive': validation_sensitive
+            },
+            'test': {
+                'features': test[:, :-num_classes],
+                'labels': test[:, -num_classes:],
+                'sensitive': test_sensitive
+            },
+            'sensitive_positive_value': 'Male'
         }
 
         return dataset

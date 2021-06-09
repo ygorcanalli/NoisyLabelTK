@@ -2,12 +2,14 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
+
 import noisylabeltk.models as models
 import neptune.new as neptune
 import optuna
 from optuna.samplers import TPESampler
 from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
 from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
+import numpy as np
 
 class ExperimentBundle(object):
 
@@ -142,26 +144,26 @@ class Experiment(object):
 
         self.num_features = num_features
         self.num_classes = num_classes
-        self.run = None
+        self.neptune_run = None
         self.model = None
 
     def build_model(self, hyperparameters):
 
-        if self.run is None:
+        if self.neptune_run is None:
             self._init_tracking()
 
-        self.run['parameters/hyperparameters'] = hyperparameters
+        self.neptune_run['parameters/hyperparameters'] = hyperparameters
 
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
                            metrics=['accuracy'])
 
-        self.model.summary(print_fn=lambda x: self.run['model_summary'].log(x))
+        self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
     def fit_model(self, train, validation):
 
-        neptune_cbk = NeptuneKerasCallback(run=self.run, base_namespace='metrics')
+        neptune_cbk = NeptuneKerasCallback(self.neptune_run, base_namespace='metrics')
         history = self.model.fit(train, epochs=10,
                                  validation_data=validation,
                                  callbacks=[neptune_cbk],
@@ -171,15 +173,14 @@ class Experiment(object):
         eval_metrics = self.model.evaluate(test, verbose=0)
 
         for j, metric in enumerate(eval_metrics):
-            self.run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
-
-        self._stop_tracking()
+            self.neptune_run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
 
     def _init_tracking(self):
-        self.run = neptune.init(project=self.project_name, name=self.name)
-        self.run["model/params"] = self.parameters
-        self.run['parameters/num-features'] = self.num_features
-        self.run['parameters/num-classes'] = self.num_classes
+        self.neptune_run = neptune.init(project=self.project_name, name=self.name,
+                                        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1ZGUxY2IwMy1kOTMzLTRjMTUtYjAxYy01MWE2MmMyYzQ0ZmYifQ==")
+        self.neptune_run["model/params"] = self.parameters
+        self.neptune_run['parameters/num-features'] = self.num_features
+        self.neptune_run['parameters/num-classes'] = self.num_classes
 
-    def _stop_tracking(self):
-        self.run.stop()
+    def stop_tracking(self):
+        self.neptune_run.stop()

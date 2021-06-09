@@ -4,7 +4,7 @@ import os
 
 project_name = 'ygorcanalli/LabelNoise'
 n_jobs = 8
-device = 'cpu'
+device = 'gpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -30,7 +30,7 @@ def main():
 
     batch_size_list = [128]
     epochs_list = [20]
-    dataset_list = ['synthetic-50-2-100K']
+    dataset_list = ['synthetic-80-5-200K']
     model_list = ['simple-mlp']
 
     robust_methods = ['none', 'boot-soft', 'boot-hard', 'forward', 'backward']
