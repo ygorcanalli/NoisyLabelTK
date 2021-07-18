@@ -30,7 +30,7 @@ def main():
 
     batch_size_list = [128]
     epochs_list = [20]
-    dataset_list = ['synthetic-80-5-200K']
+    dataset_list = ['income']
     model_list = ['simple-mlp']
 
     robust_methods = ['none', 'boot-soft', 'boot-hard', 'forward', 'backward']

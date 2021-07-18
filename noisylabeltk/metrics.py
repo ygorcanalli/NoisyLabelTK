@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow_addons as tfa
 
 def evaluate_discrimination(dataset_loader, model):
     dataset = dataset_loader.datasets[dataset_loader.name]()
@@ -14,3 +15,6 @@ def evaluate_discrimination(dataset_loader, model):
     total_negative = (~sensitive).sum()
 
     return accepted_positive/total_positive - accepted_negative/total_negative
+
+def get_mcc_metric():
+    return tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2)

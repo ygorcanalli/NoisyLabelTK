@@ -237,7 +237,6 @@ class DatasetLoader(object):
                                                  as_supervised=True,
                                                  with_info=True)
         return (train_ds, test_ds), ds_info
-
     def load_synthetic_50_2_100K(self):
         path = os.path.join(BASE_PATH, 'synthetic_50_2_100K', 'data.csv')
 
@@ -280,7 +279,6 @@ class DatasetLoader(object):
         }
 
         return dataset
-
     def load_synthetic_100_5_500K(self):
         path = os.path.join(BASE_PATH, 'synthetic_100_5_500K', 'data.csv')
 
@@ -323,7 +321,6 @@ class DatasetLoader(object):
         }
 
         return dataset
-
     def load_synthetic_80_5_200K(self):
         path = os.path.join(BASE_PATH, 'synthetic_80_5_200K', 'data.csv')
 
@@ -366,9 +363,6 @@ class DatasetLoader(object):
         }
 
         return dataset
-
-
-    # TODO: migrate german loader to numpy
     def load_germancredit(self):
         path = os.path.join(BASE_PATH, 'german_credit', 'german.data')
         column_names = ['status', 'duration', 'history', 'purpose', 'amount', 'savings', 'employmentsince',
@@ -456,7 +450,7 @@ class DatasetLoader(object):
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
-            ("sensitive_onehot", OneHotEncoder(handle_unknown='ignore'), sensitive_features),
+            ("sensitive_onehot", OneHotEncoder(categories=[['Male','Female']], handle_unknown='ignore'), sensitive_features),
             ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
         ])
 
@@ -473,23 +467,27 @@ class DatasetLoader(object):
 
         num_classes = int(train_dataframe[target_class].nunique())
         num_features = train.shape[1] - num_classes
+        num_sensitive = int(train_dataframe[sensitive_features].nunique())
+
+        num_target = num_classes + num_sensitive
 
         dataset = {
             'num_classes': num_classes,
             'num_features': num_features,
+            'num_sensitive': num_sensitive,
             'train': {
                 'features': train[:, :-num_classes],
-                'labels': train[:, -num_classes:],
+                'labels': train[:, -num_target:],
                 'sensitive': train_sensitive
             },
             'validation': {
                 'features': validation[:, :-num_classes],
-                'labels': validation[:, -num_classes:],
+                'labels': validation[:, -num_target:],
                 'sensitive': validation_sensitive
             },
             'test': {
                 'features': test[:, :-num_classes],
-                'labels': test[:, -num_classes:],
+                'labels': test[:, -num_target:],
                 'sensitive': test_sensitive
             },
             'sensitive_positive_value': 'Male'
@@ -539,7 +537,6 @@ class DatasetLoader(object):
         }
 
         return dataset
-
     def load_diabetes(self):
         path = os.path.join(BASE_PATH, 'diabetes', 'diabetes_data_upload.csv')
 

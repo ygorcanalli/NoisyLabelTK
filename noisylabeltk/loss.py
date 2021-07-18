@@ -80,6 +80,26 @@ def boot_hard(y_true, y_pred):
     return -K.sum((beta * y_true + (1. - beta) * pred_labels) *
                   K.log(y_pred), axis=-1)
 
+def fair_forward(P_list):
+
+    loss_list = []
+    n_sensitive = len(P_list)
+    for P in P_list:
+        loss_list.append(forward(P))
+
+    def combined_loss(y_true, y_pred):
+        result_loss = []
+        n_classes = y_true.shape[1] - n_sensitive
+        y_true_sensitive = y_true[:,:n_sensitive]
+        y_true = y_true[:,-n_classes:]
+        for i, loss in enumerate(loss_list):
+            index = y_true_sensitive[:,i] == 1
+            result_loss.append( loss(y_true[index], y_pred[index]) )
+
+        return tf.concat(result_loss, 0)
+
+    return combined_loss
+
 # implementation is taken from: https://github.com/xingjunm/dimensionality-driven-learning
 def forward(P):
     """
@@ -186,6 +206,8 @@ def make_loss(name, *args, **kwargs):
             return lid(*args, **kwargs)
         elif name == 'lid-paced-loss':
             return lid_paced_loss(*args, **kwargs)
+        elif name == 'fair_forward':
+            return fair_forward(*args, **kwargs)
         else:
             raise Exception('Unavailable loss function %s' % name)
 

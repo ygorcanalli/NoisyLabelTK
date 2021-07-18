@@ -2,6 +2,7 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
+import tensorflow_addons as tfa
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -154,10 +155,11 @@ class Experiment(object):
 
         self.neptune_run['parameters/hyperparameters'] = hyperparameters
 
+        mcc = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=self.num_classes)
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
-                           metrics=['accuracy'])
+                           metrics=['accuracy', mcc])
 
         self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
