@@ -2,7 +2,8 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
-import tensorflow_addons as tfa
+from noisylabeltk.metrics import CustomAccuracy, CustomPrecision, CustomTruePositives, CustomTrueNegatives,\
+                                    CustomFalsePositives, CustomFalseNegatives, BinaryMCC
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -112,11 +113,12 @@ class ExperimentBundle(object):
 
 class Experiment(object):
 
-    def __init__(self, num_features, num_classes, parameters, project_name, experiment_name):
+    def __init__(self, num_features, num_classes, parameters, project_name, experiment_name, tags=None):
 
         self.parameters = parameters
         self.project_name = project_name
         self.name = experiment_name
+        self.tags = tags
 
         if 'noise_args' in self.parameters and self.parameters is not None:
             for i, arg in enumerate(self.parameters['noise-args']):
@@ -155,11 +157,13 @@ class Experiment(object):
 
         self.neptune_run['parameters/hyperparameters'] = hyperparameters
 
-        mcc = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=self.num_classes)
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
-                           metrics=['accuracy', mcc])
+                           metrics=[CustomAccuracy(), CustomPrecision(),\
+                                    CustomTruePositives(), CustomTrueNegatives(),\
+                                    CustomFalsePositives(), CustomFalseNegatives(), \
+                                    BinaryMCC()])
 
         self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
@@ -178,7 +182,10 @@ class Experiment(object):
             self.neptune_run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
 
     def _init_tracking(self):
-        self.neptune_run = neptune.init(project=self.project_name, name=self.name,
+        self.neptune_run = neptune.init(project=self.project_name,
+                                        mode = "async",
+                                        tags=self.tags,
+                                        name=self.name,
                                         api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1ZGUxY2IwMy1kOTMzLTRjMTUtYjAxYy01MWE2MmMyYzQ0ZmYifQ==")
         self.neptune_run["model/params"] = self.parameters
         self.neptune_run['parameters/num-features'] = self.num_features

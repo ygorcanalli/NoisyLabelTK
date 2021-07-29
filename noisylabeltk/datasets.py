@@ -40,8 +40,9 @@ def normalize_img(image, label):
 
 class DatasetLoader(object):
 
-    def __init__(self, name, batch_size):
+    def __init__(self, name, batch_size, sensitive_labels=False):
         self.name =  name
+        self.sensitive_labels=sensitive_labels
         self.datasets = {
             'income': self.load_income,
             'german': self.load_germancredit,
@@ -469,7 +470,10 @@ class DatasetLoader(object):
         num_features = train.shape[1] - num_classes
         num_sensitive = int(train_dataframe[sensitive_features].nunique())
 
-        num_target = num_classes + num_sensitive
+        if self.sensitive_labels:
+            num_target = num_classes + num_sensitive
+        else:
+            num_target = num_classes
 
         dataset = {
             'num_classes': num_classes,

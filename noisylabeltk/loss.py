@@ -88,15 +88,13 @@ def fair_forward(P_list):
         loss_list.append(forward(P))
 
     def combined_loss(y_true, y_pred):
-        result_loss = []
         n_classes = y_true.shape[1] - n_sensitive
         y_true_sensitive = y_true[:,:n_sensitive]
         y_true = y_true[:,-n_classes:]
-        for i, loss in enumerate(loss_list):
-            index = y_true_sensitive[:,i] == 1
-            result_loss.append( loss(y_true[index], y_pred[index]) )
+        l0 = loss_list[0](y_true, y_pred) * y_true_sensitive[:,0]
+        l1 = loss_list[1](y_true, y_pred) * y_true_sensitive[:,1]
 
-        return tf.concat(result_loss, 0)
+        return l0+l1
 
     return combined_loss
 
@@ -206,7 +204,7 @@ def make_loss(name, *args, **kwargs):
             return lid(*args, **kwargs)
         elif name == 'lid-paced-loss':
             return lid_paced_loss(*args, **kwargs)
-        elif name == 'fair_forward':
+        elif name == 'fair-forward':
             return fair_forward(*args, **kwargs)
         else:
             raise Exception('Unavailable loss function %s' % name)
