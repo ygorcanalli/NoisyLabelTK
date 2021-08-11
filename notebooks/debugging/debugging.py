@@ -12,8 +12,8 @@ import os
 project_name = 'PESC-ATIS/FairnessDebug'
 tags = ['creating metrics']
 experiment_name = 'arbitrary_correction_batch'
-n_jobs = 1
-device = 'gpu'
+n_jobs = 4
+device = 'cpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -86,7 +86,7 @@ for i in range(repeat):
                     'loss-args': [P_list],
                     'loss-kwargs': None,
                 }
-                #parameters_list.append(parameters)
+                parameters_list.append(parameters)
                 run(parameters)
 
-#Parallel(n_jobs=4)(delayed(run)(parameters) for parameters in parameters_list)
+Parallel(n_jobs=n_jobs)(delayed(run)(parameters) for parameters in parameters_list)

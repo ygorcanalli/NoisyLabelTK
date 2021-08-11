@@ -2,8 +2,8 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
-from noisylabeltk.metrics import CustomAccuracy, CustomPrecision, CustomTruePositives, CustomTrueNegatives,\
-                                    CustomFalsePositives, CustomFalseNegatives, BinaryMCC
+from noisylabeltk.metrics import Accuracy, Precision, TruePositives, TrueNegatives,\
+                                    FalsePositives, FalseNegatives, BinaryMCC
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -12,6 +12,14 @@ from optuna.samplers import TPESampler
 from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
 from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
 import numpy as np
+
+acc = Accuracy(name="Acc")
+prec = Precision(name="Prec")
+tp = TruePositives(name="TP")
+tn = TrueNegatives(name="TN")
+fp = FalsePositives(name="FP")
+fn = FalseNegatives(name="FN")
+mcc = BinaryMCC(name="MCC")
 
 class ExperimentBundle(object):
 
@@ -160,10 +168,7 @@ class Experiment(object):
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
-                           metrics=[CustomAccuracy(), CustomPrecision(),\
-                                    CustomTruePositives(), CustomTrueNegatives(),\
-                                    CustomFalsePositives(), CustomFalseNegatives(), \
-                                    BinaryMCC()])
+                           metrics=[acc, prec, tn, tp, fn, fp, mcc])
 
         self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
@@ -180,6 +185,27 @@ class Experiment(object):
 
         for j, metric in enumerate(eval_metrics):
             self.neptune_run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
+
+            if self.model.metrics_names[j] == 'TP':
+                eval_tp = metric
+            elif self.model.metrics_names[j] == 'TN':
+                eval_tn = metric
+            elif self.model.metrics_names[j] == 'FP':
+                eval_fp = metric
+            elif self.model.metrics_names[j] == 'FN':
+                eval_fn = metric
+
+        eval_tpr = eval_tp / (eval_tp + eval_fp)
+        eval_fpr = eval_fp / (eval_tp + eval_fp)
+        eval_tnr = eval_tn / (eval_tn + eval_fn)
+        eval_fnr = eval_fn / (eval_tn + eval_fn)
+
+        self.neptune_run['metrics/eval_TPR'].log(eval_tpr)
+        self.neptune_run['metrics/eval_FPR'].log(eval_fpr)
+        self.neptune_run['metrics/eval_TNR'].log(eval_tnr)
+        self.neptune_run['metrics/eval_FNR'].log(eval_fnr)
+
+    def evaluate_discrimination(self, test):
 
     def _init_tracking(self):
         self.neptune_run = neptune.init(project=self.project_name,

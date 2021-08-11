@@ -1,36 +1,42 @@
 import numpy as np
-from keras.metrics import BinaryAccuracy, Precision, TruePositives, TrueNegatives, FalsePositives, FalseNegatives
+from keras.metrics import BinaryAccuracy, Precision, TruePositives, TrueNegatives, FalsePositives, FalseNegatives, Metric
+from keras.callbacks import Callback
 import tensorflow_addons as tfa
 
 
-class CustomFalseNegatives(FalseNegatives):
+class FalseNegatives(FalseNegatives):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomFalseNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(FalseNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 
-class CustomFalsePositives(FalsePositives):
+class FalsePositives(FalsePositives):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomFalsePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(FalsePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 
-class CustomTrueNegatives(TrueNegatives):
+class TrueNegatives(TrueNegatives):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomTrueNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(TrueNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 
-class CustomTruePositives(TruePositives):
+class TruePositives(TruePositives):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomTruePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(TruePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 
-class CustomAccuracy(BinaryAccuracy):
+class Accuracy(BinaryAccuracy):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomAccuracy, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(Accuracy, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 
-class CustomPrecision(Precision):
+class Precision(Precision):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(CustomPrecision, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+        return super(Precision, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+
+class TruePositiveRate(Metric):
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        return super(Precision, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+
 
 
 def evaluate_discrimination(dataset_loader, model):
@@ -48,5 +54,6 @@ def evaluate_discrimination(dataset_loader, model):
 
     return accepted_positive / total_positive - accepted_negative / total_negative
 
-def BinaryMCC():
-    return tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2)
+def BinaryMCC(name):
+    return tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2, name=name)
+
