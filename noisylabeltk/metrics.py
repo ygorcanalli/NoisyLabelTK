@@ -1,8 +1,5 @@
 import numpy as np
-from keras.metrics import BinaryAccuracy, Precision, TruePositives, TrueNegatives, FalsePositives, FalseNegatives, Metric
-from keras.callbacks import Callback
-import tensorflow_addons as tfa
-from pprint import pprint
+from keras.metrics import BinaryAccuracy
 
 class Accuracy(BinaryAccuracy):
     def update_state(self, y_true, y_pred, sample_weight=None):
@@ -19,6 +16,9 @@ def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
     npv = tn / (tn + fn)
     FOR = fn / (fn + tn)
     positives = (tp + fp) / (tp + fp + tn + fn)
+    negatives = (tn + fn) / (tp + fp + tn + fn)
+    MCC = ((tp * tn) - (fp * fn)) / np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    ACC = (tp + tn) / (tp + fp + tn + fn)
 
     rates = {
         'TPR': tpr,
@@ -29,11 +29,10 @@ def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
         'FDR': fdr,
         'NPV': npv,
         'FOR': FOR,
-        'Positives': positives
+        'MCC': MCC,
+        'ACC': ACC,
+        'Positives': positives,
+        'Negatives': negatives
     }
 
     return rates
-
-def BinaryMCC(name):
-    return tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2, name=name)
-

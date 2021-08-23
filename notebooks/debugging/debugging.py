@@ -57,11 +57,11 @@ repeat = 1
 
 
 P_list_options = []
-for fp_male in [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]:
-    for fn_female in [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]:
-        fn_male = fp_male/10
-        fp_female = fn_female/10
-        P_list = get_p_list(fp_male, fn_male, fp_female, fn_female)
+for unprotected_demotion in [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]:
+    for protected_promotion in [0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]:
+        unprotected_promotion = unprotected_demotion / 10
+        protected_demotion = protected_promotion / 10
+        P_list = get_p_list(unprotected_demotion, unprotected_promotion, protected_demotion, protected_promotion)
         P_list_options.append(P_list)
 
 
@@ -82,6 +82,10 @@ for i in range(repeat):
                     'noise-args': None,
                     'robust-method': 'fair-forward',
                     'loss-args': [P_list],
+                    'protected-promotion': protected_promotion,
+                    'protected-demotion': protected_demotion,
+                    'unprotected-promotion': unprotected_promotion,
+                    'unprotected-demotion': unprotected_demotion,
                     'loss-kwargs': None,
                 }
                 parameters_list.append(parameters)

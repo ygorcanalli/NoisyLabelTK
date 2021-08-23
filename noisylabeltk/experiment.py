@@ -2,9 +2,7 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
-from noisylabeltk.metrics import Accuracy, TruePositives, TrueNegatives,\
-                                    FalsePositives, FalseNegatives, BinaryMCC, \
-                                    fairness_metrics_from_confusion_matrix
+from noisylabeltk.metrics import Accuracy, fairness_metrics_from_confusion_matrix
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -13,9 +11,6 @@ from optuna.samplers import TPESampler
 from neptune.new.integrations.tensorflow_keras import NeptuneCallback as NeptuneKerasCallback
 from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCallback
 import numpy as np
-
-acc = Accuracy(name="Acc")
-mcc = BinaryMCC(name="MCC")
 
 class Experiment(object):
 
@@ -66,7 +61,7 @@ class Experiment(object):
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
-                           metrics=[acc, mcc])
+                           metrics=[Accuracy(name="Acc")])
 
         self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
@@ -104,23 +99,36 @@ class Experiment(object):
         unprotected_fp = (pred & ~true & ~protected).sum()
         unprotected_fn = (~pred & true & ~protected).sum()
 
-        prot_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn, \
+        overall_tp = (pred & true).sum()
+        overall_tn = (~pred & ~true).sum()
+        overall_fp = (pred & ~true).sum()
+        overall_fn = (~pred & true).sum()
+
+        protected_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn, \
                                                             protected_fp, protected_fn)
 
-        un_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn, \
+        unprotected_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn, \
                                                           unprotected_fp, unprotected_fn)
 
-        for name in un_rates.keys():
-            unprotected_value = un_rates[name]
-            protected_value = prot_rates[name]
-            self.neptune_run['metrics/eval_%s_balance' % name].log(unprotected_value - protected_value)
+        overall_rates = fairness_metrics_from_confusion_matrix(overall_tp, overall_tn, \
+                                                                   overall_fp, overall_fn)
+
+        for name in unprotected_rates.keys():
+            unprotected_value = unprotected_rates[name]
+            protected_value = protected_rates[name]
+            overall_value = overall_rates[name]
+            self.neptune_run['metrics/%s_protected' % name].log(protected_value)
+            self.neptune_run['metrics/%s_unprotected' % name].log(unprotected_value)
+            self.neptune_run['metrics/%s_overall' % name].log(overall_value)
+            self.neptune_run['metrics/%s_balance' % name].log(unprotected_value - protected_value)
+            self.neptune_run['metrics/%s_relative_balance' % name].log( (unprotected_value - protected_value) / overall_value)
 
         audit_acc = (pred == true).sum() / test['labels'].shape[0]
         self.neptune_run['metrics/audit_acc'].log(audit_acc)
 
     def _init_tracking(self):
         self.neptune_run = neptune.init(project=self.project_name,
-                                        mode = "async",
+                                        mode="async",
                                         tags=self.tags,
                                         name=self.name,
                                         api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1ZGUxY2IwMy1kOTMzLTRjMTUtYjAxYy01MWE2MmMyYzQ0ZmYifQ==")
