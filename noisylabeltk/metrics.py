@@ -2,57 +2,39 @@ import numpy as np
 from keras.metrics import BinaryAccuracy, Precision, TruePositives, TrueNegatives, FalsePositives, FalseNegatives, Metric
 from keras.callbacks import Callback
 import tensorflow_addons as tfa
-
-
-class FalseNegatives(FalseNegatives):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(FalseNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
-
-
-class FalsePositives(FalsePositives):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(FalsePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
-
-
-class TrueNegatives(TrueNegatives):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(TrueNegatives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
-
-
-class TruePositives(TruePositives):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(TruePositives, self).update_state(y_true[:, -2:], y_pred, sample_weight)
-
+from pprint import pprint
 
 class Accuracy(BinaryAccuracy):
     def update_state(self, y_true, y_pred, sample_weight=None):
         return super(Accuracy, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
+def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
 
-class Precision(Precision):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(Precision, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+    tpr = tp / (tp + fn)
+    fpr = fp / (fp + tn)
+    tnr = tn / (tn + fp)
+    fnr = fn / (fn + tp)
+    ppv = tp / (tp + fp)
+    fdr = fp / (fp + tp)
+    npv = tn / (tn + fn)
+    FOR = fn / (fn + tn)
+    positives = (tp + fp) / (tp + fp + tn + fn)
+    negatives = (tn + fn) / (tp + fp + tn + fn)
 
-class TruePositiveRate(Metric):
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        return super(Precision, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+    rates = {
+        'TPR': tpr,
+        'TNR': tnr,
+        'FPR': fpr,
+        'FNR': fnr,
+        'PPV': ppv,
+        'FDR': fdr,
+        'NPV': npv,
+        'FOR': FOR,
+        'Positives': positives,
+        'Negatives': negatives,
+    }
 
-
-
-def evaluate_discrimination(dataset_loader, model):
-    dataset = dataset_loader.datasets[dataset_loader.name]()
-
-    pred = model.predict(dataset['test']['features'])
-    pred = np.argmax(pred, axis=1).reshape(pred.shape[0], 1)
-
-    sensitive = (dataset['test']['sensitive'] == dataset['sensitive_positive_value']).to_numpy()
-    accepted_positive = (pred & sensitive).sum()
-    accepted_negative = (pred & ~sensitive).sum()
-
-    total_positive = sensitive.sum()
-    total_negative = (~sensitive).sum()
-
-    return accepted_positive / total_positive - accepted_negative / total_negative
+    return rates
 
 def BinaryMCC(name):
     return tfa.metrics.MatthewsCorrelationCoefficient(num_classes=2, name=name)

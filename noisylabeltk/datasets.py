@@ -11,6 +11,7 @@ import sklearn.datasets as skds
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
+from pprint import pprint
 from noisylabeltk.noise_generator import build_noise_generator
 
 BASE_PATH = 'datasets'
@@ -44,24 +45,20 @@ class DatasetLoader(object):
         self.name =  name
         self.sensitive_labels=sensitive_labels
         self.datasets = {
-            'income': self.load_income,
-            'german': self.load_germancredit,
-            'breast-cancer': self.load_breastcancer,
-            'diabetes': self.load_diabetes,
-            'synthetic-50-2-100K': self.load_synthetic_50_2_100K,
-            'synthetic-100-5-500K': self.load_synthetic_100_5_500K,
-            'synthetic-80-5-200K': self.load_synthetic_80_5_200K,
+            'income': self._load_income,
+            'german': self._load_germancredit,
+            'breast-cancer': self._load_breastcancer,
+            'diabetes': self._load_diabetes,
+            'synthetic-50-2-100K': self._load_synthetic_50_2_100K,
+            'synthetic-100-5-500K': self._load_synthetic_100_5_500K,
+            'synthetic-80-5-200K': self._load_synthetic_80_5_200K,
         }
         self.batch_size = batch_size
 
     def load(self):
         dataset_loader = self.datasets[self.name]
         dataset = dataset_loader()
-        train_ds = np_to_dataset(dataset['train']['features'], dataset['train']['labels'], batch_size=self.batch_size)
-        validation_ds = np_to_dataset(dataset['validation']['features'], dataset['validation']['labels'], batch_size=self.batch_size)
-        test_ds = np_to_dataset(dataset['test']['features'], dataset['test']['labels'], batch_size=self.batch_size)
-
-        return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
+        return dataset
 
     def pollute_and_load(self, noise_name, *args):
         dataset_loader = self.datasets[self.name]
@@ -79,7 +76,7 @@ class DatasetLoader(object):
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
-    def load_mnist(self):
+    def _load_mnist(self):
         (train_ds, validation_ds, test_ds), ds_info = tfds.load('mnist',
                                                                 split=['train[0:90%]', 'train[-10%:]', 'test'],
                                                                 as_supervised=True,
@@ -106,7 +103,7 @@ class DatasetLoader(object):
         test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         return (train_ds, validation_ds, test_ds), ds_info
-    def load_fashionmnist(self):
+    def _load_fashionmnist(self):
         (train_ds, validation_ds, test_ds), ds_info = tfds.load('fashion_mnist',
                                                                 split=['train[0:90%]', 'train[-10%:]', 'test'],
                                                                 as_supervised=True,
@@ -133,7 +130,7 @@ class DatasetLoader(object):
         test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         return (train_ds, validation_ds, test_ds), ds_info
-    def load_cifar10(self):
+    def _load_cifar10(self):
         (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar10',
                                                                 split=['train[0:90%]', 'train[-10%:]', 'test'],
                                                                 shuffle_files=True,
@@ -161,7 +158,7 @@ class DatasetLoader(object):
         test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         return (train_ds, validation_ds, test_ds), ds_info
-    def load_cifar100(self):
+    def _load_cifar100(self):
         (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar100',
                                                                 split=['train[0:90%]', 'train[-10%:]', 'test'],
                                                                 shuffle_files=True,
@@ -189,7 +186,7 @@ class DatasetLoader(object):
         test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         return (train_ds, validation_ds, test_ds), ds_info
-    def load_food101(self):
+    def _load_food101(self):
         (train_ds, validation_ds, test_ds), ds_info = tfds.load('food101',
                                                                 split=['train[0:90%]', 'train[-10%:]', 'test'],
                                                                 shuffle_files=True,
@@ -217,28 +214,28 @@ class DatasetLoader(object):
         test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         return (train_ds, validation_ds, test_ds), ds_info
-    def load_svhn(self):
+    def _load_svhn(self):
         (train_ds, test_ds), ds_info = tfds.load('svhn_cropped',
                                                  split=['train', 'test'],
                                                  shuffle_files=True,
                                                  as_supervised=True,
                                                  with_info=True)
         return (train_ds, test_ds), ds_info
-    def load_imagenet(self):
+    def _load_imagenet(self):
         (train_ds, test_ds), ds_info = tfds.load('imagenet2012',
                                                  split=['train', 'test'],
                                                  shuffle_files=True,
                                                  as_supervised=True,
                                                  with_info=True)
         return (train_ds, test_ds), ds_info
-    def load_openimage(self):
+    def _load_openimage(self):
         (train_ds, test_ds), ds_info = tfds.load('open_images_challenge2019_detection',
                                                  split=['train', 'test'],
                                                  shuffle_files=True,
                                                  as_supervised=True,
                                                  with_info=True)
         return (train_ds, test_ds), ds_info
-    def load_synthetic_50_2_100K(self):
+    def _load_synthetic_50_2_100K(self):
         path = os.path.join(BASE_PATH, 'synthetic_50_2_100K', 'data.csv')
 
         dataframe = pd.read_csv(path, delimiter=',')
@@ -280,7 +277,7 @@ class DatasetLoader(object):
         }
 
         return dataset
-    def load_synthetic_100_5_500K(self):
+    def _load_synthetic_100_5_500K(self):
         path = os.path.join(BASE_PATH, 'synthetic_100_5_500K', 'data.csv')
 
         dataframe = pd.read_csv(path, delimiter=',')
@@ -322,7 +319,7 @@ class DatasetLoader(object):
         }
 
         return dataset
-    def load_synthetic_80_5_200K(self):
+    def _load_synthetic_80_5_200K(self):
         path = os.path.join(BASE_PATH, 'synthetic_80_5_200K', 'data.csv')
 
         dataframe = pd.read_csv(path, delimiter=',')
@@ -364,7 +361,7 @@ class DatasetLoader(object):
         }
 
         return dataset
-    def load_germancredit(self):
+    def _load_germancredit(self):
         path = os.path.join(BASE_PATH, 'german_credit', 'german.data')
         column_names = ['status', 'duration', 'history', 'purpose', 'amount', 'savings', 'employmentsince',
                         'installmentate', 'personalstatus', 'garantors', 'residencesince', 'property', 'age',
@@ -421,12 +418,11 @@ class DatasetLoader(object):
                 'labels': test[:, -num_classes:],
                 'sensitive': test_sensitive
             },
-            'sensitive_positive_value': 'A202' # not foreign worker
+            'unprotected_value': 'A202' # not foreign worker
         }
 
         return dataset
-
-    def load_income(self):
+    def _load_income(self):
         train_path = os.path.join(BASE_PATH, 'income', 'adult.data')
         test_path = os.path.join(BASE_PATH, 'income', 'adult.test')
 
@@ -447,12 +443,13 @@ class DatasetLoader(object):
 
         train_dataframe = pd.read_csv(train_path, names=column_names, sep=', ')
         test = pd.read_csv(test_path, names=column_names, sep=', ')
+        test['label'] = test['label'].str.replace('.', '')
 
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
             ("sensitive_onehot", OneHotEncoder(categories=[['Male','Female']], handle_unknown='ignore'), sensitive_features),
-            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+            ("categorical_target", OneHotEncoder(categories=[['<=50K','>50K']],handle_unknown='ignore'), target_class),
         ])
 
         train, validation = train_test_split(train_dataframe, test_size=0.2, random_state=get_seed())
@@ -494,12 +491,12 @@ class DatasetLoader(object):
                 'labels': test[:, -num_target:],
                 'sensitive': test_sensitive
             },
-            'sensitive_positive_value': 'Male'
+            'protected_value': 'Female'
         }
 
         return dataset
 
-    def load_breastcancer(self):
+    def _load_breastcancer(self):
         breast_cancer = skds.load_breast_cancer(as_frame=True)
         dataframe = breast_cancer['frame']
 
@@ -541,7 +538,7 @@ class DatasetLoader(object):
         }
 
         return dataset
-    def load_diabetes(self):
+    def _load_diabetes(self):
         path = os.path.join(BASE_PATH, 'diabetes', 'diabetes_data_upload.csv')
 
         dataframe = pd.read_csv(path, delimiter=",")

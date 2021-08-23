@@ -2,8 +2,9 @@
 from tensorflow.keras.losses import categorical_crossentropy
 from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
-from noisylabeltk.metrics import Accuracy, Precision, TruePositives, TrueNegatives,\
-                                    FalsePositives, FalseNegatives, BinaryMCC
+from noisylabeltk.metrics import Accuracy, TruePositives, TrueNegatives,\
+                                    FalsePositives, FalseNegatives, BinaryMCC, \
+                                    statistical_parity, fairness_metrics_from_confusion_matrix
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -14,110 +15,7 @@ from neptunecontrib.monitoring.optuna import NeptuneCallback as NeptuneOptunaCal
 import numpy as np
 
 acc = Accuracy(name="Acc")
-prec = Precision(name="Prec")
-tp = TruePositives(name="TP")
-tn = TrueNegatives(name="TN")
-fp = FalsePositives(name="FP")
-fn = FalseNegatives(name="FN")
 mcc = BinaryMCC(name="MCC")
-
-class ExperimentBundle(object):
-
-    def __init__(self, dataset, model, batch_size, epochs, \
-                 robust_method_list, project_name, \
-                 noise, noise_args, \
-                 hyperparameters_range, num_trials, trial_epochs):
-
-        self.dataset_name = dataset
-        self.model_name = model
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.noise_name = noise
-        self.noise_args = noise_args
-        self.robust_method_list = robust_method_list
-        self.project_name = project_name
-        self.hyperparameters_range = hyperparameters_range
-        self.num_trials = num_trials
-        self.trial_epochs = trial_epochs
-        self.train = None
-        self.validation = None
-        self.test = None
-        self.num_features = None
-        self.num_classes = None
-        self.best_hyperparameters = None
-        self.experiment_name = "%s-%s-%s" % (self.dataset_name, self.noise_name, str(self.noise_args))
-    # TODO track hyperparameters tunning
-    def _tune(self):
-
-        def objective(trial):
-            num_layers = trial.suggest_int("num_layers", self.hyperparameters_range['num-layers']['min'],\
-                                           self.hyperparameters_range['num-layers']['max'])
-
-            for i in range(num_layers):
-                trial.suggest_int("hidden_size_{}".format(i), self.hyperparameters_range['hidden-size']['min'], \
-                                  self.hyperparameters_range['hidden-size']['max'], log=True)
-
-            trial.suggest_float("dropout", self.hyperparameters_range['dropout']['min'], \
-                                self.hyperparameters_range['dropout']['max'])
-            kwargs = trial.params
-            model = models.create_model(self.model_name, self.num_features, self.num_classes, **kwargs)
-
-            model.compile(optimizer='adam',
-                               loss=categorical_crossentropy,
-                               metrics=['accuracy'])
-
-            history = model.fit(self.train, epochs=self.trial_epochs, verbose=0)
-
-            eval_metrics = model.evaluate(self.validation, verbose=0)
-
-            for j, metric in enumerate(eval_metrics):
-                if model.metrics_names[j] == 'accuracy':
-                    return metric
-
-        study = optuna.create_study(direction='maximize')
-        study.optimize(objective, n_trials=self.num_trials)
-
-        self.best_hyperparameters = study.best_trial.params
-
-    def _load_data(self):
-
-        dataset_loader = DatasetLoader(self.dataset_name, self.batch_size)
-
-        if self.noise_name is not None and self.noise_name != 'none' and self.noise_args is not None:
-            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.pollute_and_load(self.noise_name, *(self.noise_args))
-        else:
-            (train_ds, validation_ds, test_ds), num_features, num_classes = dataset_loader.load()
-
-        self.train = train_ds
-        self.validation = validation_ds
-        self.test = test_ds
-        self.num_features = num_features
-        self.num_classes = num_classes
-
-    def _run(self, robust_method, loss_args, loss_kwargs):
-
-        parameters = {
-            'batch-size': self.batch_size,
-            'epochs': self.epochs,
-            'dataset': self.dataset_name,
-            'model': self.model_name,
-            'noise': self.noise_name,
-            'noise-args': self.noise_args,
-            'robust-method': robust_method,
-            'loss-args': loss_args,
-            'loss-kwargs': loss_kwargs,
-        }
-
-        exp = Experiment(self.num_features, self.num_classes, parameters, self.project_name, self.experiment_name)
-        exp.build_model(self.best_hyperparameters)
-        exp.fit_model(self.train, self.validation)
-        exp.evaluate(self.test)
-
-    def run_bundle(self):
-        self._load_data()
-        self._tune()
-        for robust_method in self.robust_method_list:
-            self._run(robust_method['name'], robust_method['args'], robust_method['kwargs'])
 
 class Experiment(object):
 
@@ -168,44 +66,94 @@ class Experiment(object):
         self.model = models.create_model(self.parameters['model'], self.num_features, self.num_classes, **hyperparameters)
         self.model.compile(optimizer='adam',
                            loss=self.loss_function,
-                           metrics=[acc, prec, tn, tp, fn, fp, mcc])
+                           metrics=[acc, mcc])
 
         self.model.summary(print_fn=lambda x: self.neptune_run['model_summary'].log(x))
 
-    def fit_model(self, train, validation):
+    def fit_model(self, train, validation, batch_size):
 
         neptune_cbk = NeptuneKerasCallback(self.neptune_run, base_namespace='metrics')
-        history = self.model.fit(train, epochs=10,
-                                 validation_data=validation,
+        history = self.model.fit(train['features'], train['labels'], batch_size, epochs=10,
+                                 validation_data=(validation['features'], validation['labels']),
                                  callbacks=[neptune_cbk],
                                  verbose=0)
 
-    def evaluate(self, test):
-        eval_metrics = self.model.evaluate(test, verbose=0)
+
+    def evaluate(self, test, batch_size):
+        eval_metrics = self.model.evaluate(test['features'], test['labels'], batch_size, verbose=0)
 
         for j, metric in enumerate(eval_metrics):
             self.neptune_run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
 
+    def _confusion_matrix_from_metrics(self, metrics):
+        for j, metric in enumerate(metrics):
             if self.model.metrics_names[j] == 'TP':
-                eval_tp = metric
+                tp = metric
             elif self.model.metrics_names[j] == 'TN':
-                eval_tn = metric
+                tn = metric
             elif self.model.metrics_names[j] == 'FP':
-                eval_fp = metric
+                fp = metric
             elif self.model.metrics_names[j] == 'FN':
-                eval_fn = metric
+                fn = metric
 
-        eval_tpr = eval_tp / (eval_tp + eval_fp)
-        eval_fpr = eval_fp / (eval_tp + eval_fp)
-        eval_tnr = eval_tn / (eval_tn + eval_fn)
-        eval_fnr = eval_fn / (eval_tn + eval_fn)
+        return tp, tn, fp, fn
 
-        self.neptune_run['metrics/eval_TPR'].log(eval_tpr)
-        self.neptune_run['metrics/eval_FPR'].log(eval_fpr)
-        self.neptune_run['metrics/eval_TNR'].log(eval_tnr)
-        self.neptune_run['metrics/eval_FNR'].log(eval_fnr)
+    def evaluate_discrimination(self, test, batch_size):
 
-    def evaluate_discrimination(self, test):
+        protected = np.squeeze(np.asarray(test['labels'][:, 1] == 1))
+        unprotected = np.squeeze(np.asarray(test['labels'][:, 0] == 1))
+
+        unprotected_metrics = self.model.evaluate(test['features'][unprotected], test['labels'][unprotected], \
+                                                  batch_size=batch_size, verbose=0)
+        protected_metrics = self.model.evaluate(test['features'][protected], test['labels'][protected], \
+                                                  batch_size=batch_size, verbose=0)
+
+        for j, (un_metric, prot_metric) in enumerate(zip(unprotected_metrics, protected_metrics)):
+
+            self.neptune_run['metrics/eval_' + self.model.metrics_names[j] + "_balance"].log(un_metric - prot_metric)
+
+        tp, tn, fp, fn = self._confusion_matrix_from_metrics(unprotected_metrics)
+        un_rates = fairness_metrics_from_confusion_matrix(tp, tn, fp, fn)
+        tp, tn, fp, fn = self._confusion_matrix_from_metrics(protected_metrics)
+        prot_rates = fairness_metrics_from_confusion_matrix(tp, tn, fp, fn)
+
+        for name in un_rates.keys():
+            unprotected_value = un_rates[name]
+            protected_value = prot_rates[name]
+            self.neptune_run['metrics/eval_%s_balance' % name].log(unprotected_value - protected_value)
+
+        parity = statistical_parity(test, self.model)
+        self.neptune_run['metrics/eval_statistical_parity'].log(parity)
+
+    def evaluate_discrimination_2(self, test, batch_size):
+
+        pred = self.model.predict(test['features'])
+        pred = np.argmax(pred, axis=1).reshape(pred.shape[0], 1).astype(bool)
+
+        true = np.argmax(test['labels'][:,-2:], axis=1).reshape(pred.shape[0], 1).astype(bool)
+
+        protected = test['labels'][:, 1].astype(bool)
+
+        protected_tp = (pred & true & protected).sum()
+        protected_tn = (~pred & ~true & protected).sum()
+        protected_fp = (pred & ~true & protected).sum()
+        protected_fn = (~pred & true & protected).sum()
+
+        unprotected_tp = (pred & true & ~protected).sum()
+        unprotected_tn = (~pred & ~true & ~protected).sum()
+        unprotected_fp = (pred & ~true & ~protected).sum()
+        unprotected_fn = (~pred & true & ~protected).sum()
+
+        un_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn, \
+                                                          protected_fp, protected_fn)
+
+        prot_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn, \
+                                                            unprotected_fp, unprotected_fn)
+
+        for name in un_rates.keys():
+            unprotected_value = un_rates[name]
+            protected_value = prot_rates[name]
+            self.neptune_run['metrics/eval_%s_balance' % name].log(unprotected_value - protected_value)
 
     def _init_tracking(self):
         self.neptune_run = neptune.init(project=self.project_name,
@@ -213,6 +161,7 @@ class Experiment(object):
                                         tags=self.tags,
                                         name=self.name,
                                         api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1ZGUxY2IwMy1kOTMzLTRjMTUtYjAxYy01MWE2MmMyYzQ0ZmYifQ==")
+
         self.neptune_run["model/params"] = self.parameters
         self.neptune_run['parameters/num-features'] = self.num_features
         self.neptune_run['parameters/num-classes'] = self.num_classes
