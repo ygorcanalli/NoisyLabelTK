@@ -19,7 +19,6 @@ def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
     npv = tn / (tn + fn)
     FOR = fn / (fn + tn)
     positives = (tp + fp) / (tp + fp + tn + fn)
-    negatives = (tn + fn) / (tp + fp + tn + fn)
 
     rates = {
         'TPR': tpr,
@@ -30,8 +29,7 @@ def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
         'FDR': fdr,
         'NPV': npv,
         'FOR': FOR,
-        'Positives': positives,
-        'Negatives': negatives,
+        'Positives': positives
     }
 
     return rates

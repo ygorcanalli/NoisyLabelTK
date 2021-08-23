@@ -4,7 +4,7 @@ from noisylabeltk.datasets import DatasetLoader
 from noisylabeltk.loss import make_loss
 from noisylabeltk.metrics import Accuracy, TruePositives, TrueNegatives,\
                                     FalsePositives, FalseNegatives, BinaryMCC, \
-                                    statistical_parity, fairness_metrics_from_confusion_matrix
+                                    fairness_metrics_from_confusion_matrix
 
 import noisylabeltk.models as models
 import neptune.new as neptune
@@ -85,47 +85,7 @@ class Experiment(object):
         for j, metric in enumerate(eval_metrics):
             self.neptune_run['metrics/eval_' + self.model.metrics_names[j]].log(metric)
 
-    def _confusion_matrix_from_metrics(self, metrics):
-        for j, metric in enumerate(metrics):
-            if self.model.metrics_names[j] == 'TP':
-                tp = metric
-            elif self.model.metrics_names[j] == 'TN':
-                tn = metric
-            elif self.model.metrics_names[j] == 'FP':
-                fp = metric
-            elif self.model.metrics_names[j] == 'FN':
-                fn = metric
-
-        return tp, tn, fp, fn
-
     def evaluate_discrimination(self, test, batch_size):
-
-        protected = np.squeeze(np.asarray(test['labels'][:, 1] == 1))
-        unprotected = np.squeeze(np.asarray(test['labels'][:, 0] == 1))
-
-        unprotected_metrics = self.model.evaluate(test['features'][unprotected], test['labels'][unprotected], \
-                                                  batch_size=batch_size, verbose=0)
-        protected_metrics = self.model.evaluate(test['features'][protected], test['labels'][protected], \
-                                                  batch_size=batch_size, verbose=0)
-
-        for j, (un_metric, prot_metric) in enumerate(zip(unprotected_metrics, protected_metrics)):
-
-            self.neptune_run['metrics/eval_' + self.model.metrics_names[j] + "_balance"].log(un_metric - prot_metric)
-
-        tp, tn, fp, fn = self._confusion_matrix_from_metrics(unprotected_metrics)
-        un_rates = fairness_metrics_from_confusion_matrix(tp, tn, fp, fn)
-        tp, tn, fp, fn = self._confusion_matrix_from_metrics(protected_metrics)
-        prot_rates = fairness_metrics_from_confusion_matrix(tp, tn, fp, fn)
-
-        for name in un_rates.keys():
-            unprotected_value = un_rates[name]
-            protected_value = prot_rates[name]
-            self.neptune_run['metrics/eval_%s_balance' % name].log(unprotected_value - protected_value)
-
-        parity = statistical_parity(test, self.model)
-        self.neptune_run['metrics/eval_statistical_parity'].log(parity)
-
-    def evaluate_discrimination_2(self, test, batch_size):
 
         pred = self.model.predict(test['features'])
         pred = np.argmax(pred, axis=1).reshape(pred.shape[0], 1).astype(bool)
@@ -144,16 +104,19 @@ class Experiment(object):
         unprotected_fp = (pred & ~true & ~protected).sum()
         unprotected_fn = (~pred & true & ~protected).sum()
 
-        un_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn, \
-                                                          protected_fp, protected_fn)
+        prot_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn, \
+                                                            protected_fp, protected_fn)
 
-        prot_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn, \
-                                                            unprotected_fp, unprotected_fn)
+        un_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn, \
+                                                          unprotected_fp, unprotected_fn)
 
         for name in un_rates.keys():
             unprotected_value = un_rates[name]
             protected_value = prot_rates[name]
             self.neptune_run['metrics/eval_%s_balance' % name].log(unprotected_value - protected_value)
+
+        audit_acc = (pred == true).sum() / test['labels'].shape[0]
+        self.neptune_run['metrics/audit_acc'].log(audit_acc)
 
     def _init_tracking(self):
         self.neptune_run = neptune.init(project=self.project_name,

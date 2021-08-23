@@ -39,7 +39,7 @@ def run(parameters, hyperparameters):
     exp.build_model(hyperparameters)
     exp.fit_model(dataset['train'], dataset['validation'], parameters['batch-size'])
     exp.evaluate(dataset['test'], parameters['batch-size'])
-    exp.evaluate_discrimination_2(dataset['test'], parameters['batch-size'])
+    exp.evaluate_discrimination(dataset['test'], parameters['batch-size'])
     exp.stop_tracking()
 
 
