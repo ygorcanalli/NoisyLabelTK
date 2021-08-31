@@ -3,7 +3,6 @@ from noisylabeltk.util import set_seed, get_seed
 set_seed(777)
 
 import tensorflow as tf
-import tensorflow_datasets as tfds
 import pandas as pd
 import numpy as np
 import os
@@ -76,165 +75,6 @@ class DatasetLoader(object):
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
-    def _load_mnist(self):
-        (train_ds, validation_ds, test_ds), ds_info = tfds.load('mnist',
-                                                                split=['train[0:90%]', 'train[-10%:]', 'test'],
-                                                                as_supervised=True,
-                                                                with_info=True)
-
-        train_ds = train_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_ds = train_ds.cache()
-        train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
-        train_ds = train_ds.batch(256)
-        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        validation_ds = validation_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_ds = validation_ds.cache()
-        validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
-        validation_ds = validation_ds.batch(256)
-        validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        test_ds = test_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_ds = test_ds.batch(256)
-        test_ds = test_ds.cache()
-        test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return (train_ds, validation_ds, test_ds), ds_info
-    def _load_fashionmnist(self):
-        (train_ds, validation_ds, test_ds), ds_info = tfds.load('fashion_mnist',
-                                                                split=['train[0:90%]', 'train[-10%:]', 'test'],
-                                                                as_supervised=True,
-                                                                with_info=True)
-
-        train_ds = train_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_ds = train_ds.cache()
-        train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
-        train_ds = train_ds.batch(256)
-        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        validation_ds = validation_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_ds = validation_ds.cache()
-        validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
-        validation_ds = validation_ds.batch(256)
-        validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        test_ds = test_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_ds = test_ds.batch(256)
-        test_ds = test_ds.cache()
-        test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return (train_ds, validation_ds, test_ds), ds_info
-    def _load_cifar10(self):
-        (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar10',
-                                                                split=['train[0:90%]', 'train[-10%:]', 'test'],
-                                                                shuffle_files=True,
-                                                                as_supervised=True,
-                                                                with_info=True)
-
-        train_ds = train_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_ds = train_ds.cache()
-        train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
-        train_ds = train_ds.batch(128)
-        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        validation_ds = validation_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_ds = validation_ds.cache()
-        validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
-        validation_ds = validation_ds.batch(128)
-        validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        test_ds = test_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_ds = test_ds.batch(128)
-        test_ds = test_ds.cache()
-        test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return (train_ds, validation_ds, test_ds), ds_info
-    def _load_cifar100(self):
-        (train_ds, validation_ds, test_ds), ds_info = tfds.load('cifar100',
-                                                                split=['train[0:90%]', 'train[-10%:]', 'test'],
-                                                                shuffle_files=True,
-                                                                as_supervised=True,
-                                                                with_info=True)
-
-        train_ds = train_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_ds = train_ds.cache()
-        train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
-        train_ds = train_ds.batch(256)
-        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        validation_ds = validation_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_ds = validation_ds.cache()
-        validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
-        validation_ds = validation_ds.batch(256)
-        validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        test_ds = test_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_ds = test_ds.batch(256)
-        test_ds = test_ds.cache()
-        test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return (train_ds, validation_ds, test_ds), ds_info
-    def _load_food101(self):
-        (train_ds, validation_ds, test_ds), ds_info = tfds.load('food101',
-                                                                split=['train[0:90%]', 'train[-10%:]', 'test'],
-                                                                shuffle_files=True,
-                                                                as_supervised=True,
-                                                                with_info=True)
-
-        train_ds = train_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        train_ds = train_ds.cache()
-        train_ds = train_ds.shuffle(ds_info.splits['train[0:90%]'].num_examples)
-        train_ds = train_ds.batch(256)
-        train_ds = train_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        validation_ds = validation_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_ds = validation_ds.cache()
-        validation_ds = validation_ds.shuffle(ds_info.splits['train[-10%:]'].num_examples)
-        validation_ds = validation_ds.batch(256)
-        validation_ds = validation_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        test_ds = test_ds.map(
-            normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        test_ds = test_ds.batch(256)
-        test_ds = test_ds.cache()
-        test_ds = test_ds.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return (train_ds, validation_ds, test_ds), ds_info
-    def _load_svhn(self):
-        (train_ds, test_ds), ds_info = tfds.load('svhn_cropped',
-                                                 split=['train', 'test'],
-                                                 shuffle_files=True,
-                                                 as_supervised=True,
-                                                 with_info=True)
-        return (train_ds, test_ds), ds_info
-    def _load_imagenet(self):
-        (train_ds, test_ds), ds_info = tfds.load('imagenet2012',
-                                                 split=['train', 'test'],
-                                                 shuffle_files=True,
-                                                 as_supervised=True,
-                                                 with_info=True)
-        return (train_ds, test_ds), ds_info
-    def _load_openimage(self):
-        (train_ds, test_ds), ds_info = tfds.load('open_images_challenge2019_detection',
-                                                 split=['train', 'test'],
-                                                 shuffle_files=True,
-                                                 as_supervised=True,
-                                                 with_info=True)
-        return (train_ds, test_ds), ds_info
     def _load_synthetic_50_2_100K(self):
         path = os.path.join(BASE_PATH, 'synthetic_50_2_100K', 'data.csv')
 
@@ -374,15 +214,34 @@ class DatasetLoader(object):
         numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'age', 'existingcredits',
                               'numbermaintence']
 
-        sensitive_features = ['foreign']
+        dataframe['label'] = dataframe['label'].astype(str)
+        dataframe.loc[dataframe['label'] == '1','label'] = 'Good'
+        dataframe.loc[dataframe['label'] == '2','label'] = 'Bad'
+
+        # A91: male: divorced / separated
+        # A92: female: divorced / separated / married
+        # A93: male: single
+        # A94: male: married / widowed
+        # A95: female: single
+
+        sensitive_features = ['personalstatus']
+        dataframe.loc[dataframe['personalstatus'] == 'A91', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A93', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A94', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A92', 'personalstatus'] = 'Female'
+        #dataframe.loc[dataframe['personalstatus'] == 'A95', 'personalstatus'] = 'Female' no single female in dataset
+        unprotected_value = 'Male'
+        protected_value = 'Female'
 
         target_class = ['label']
+        negative_class = 'Bad'
+        positive_class = 'Good'
 
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
-            ("sensitive_onehot", OneHotEncoder(handle_unknown='ignore'), sensitive_features),
-            ("categorical_target", OneHotEncoder(handle_unknown='ignore'), target_class),
+            ("sensitive_onehot", OneHotEncoder(categories=[[unprotected_value, protected_value]],handle_unknown='ignore'), sensitive_features),
+            ("categorical_target", OneHotEncoder(categories=[[negative_class, positive_class]],handle_unknown='ignore'), target_class)
         ])
 
         train, test = train_test_split(dataframe, test_size=0.2, random_state=get_seed())
@@ -399,26 +258,32 @@ class DatasetLoader(object):
 
         num_classes = int(dataframe[target_class].nunique())
         num_features = train.shape[1] - num_classes
+        num_sensitive = int(dataframe[sensitive_features].nunique())
+
+        if self.sensitive_labels:
+            num_target = num_classes + num_sensitive
+        else:
+            num_target = num_classes
 
         dataset = {
             'num_classes': num_classes,
             'num_features': num_features,
+            'num_sensitive': num_sensitive,
             'train': {
                 'features': train[:, :-num_classes],
-                'labels': train[:, -num_classes:],
+                'labels': train[:, -num_target:],
                 'sensitive': train_sensitive
             },
             'validation': {
                 'features': validation[:, :-num_classes],
-                'labels': validation[:, -num_classes:],
+                'labels': validation[:, -num_target:],
                 'sensitive': validation_sensitive
             },
             'test': {
                 'features': test[:, :-num_classes],
-                'labels': test[:, -num_classes:],
+                'labels': test[:, -num_target:],
                 'sensitive': test_sensitive
-            },
-            'unprotected_value': 'A202' # not foreign worker
+            }
         }
 
         return dataset
@@ -438,18 +303,22 @@ class DatasetLoader(object):
                               'capital-loss', 'hours-per-week']
 
         sensitive_features = ['sex']
+        unprotected_value = 'Male'
+        protected_value = 'Female'
 
         target_class = ['label']
+        negative_class = '<=50K'
+        positive_class = '>50K'
 
-        train_dataframe = pd.read_csv(train_path, names=column_names, sep=', ')
-        test = pd.read_csv(test_path, names=column_names, sep=', ')
-        test['label'] = test['label'].str.replace('.', '')
+        train_dataframe = pd.read_csv(train_path, names=column_names, sep=', ', engine='python')
+        test = pd.read_csv(test_path, names=column_names, sep=', ', engine='python')
+        test['label'] = test['label'].str.replace('.', '', regex=False)
 
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
-            ("sensitive_onehot", OneHotEncoder(categories=[['Male','Female']], handle_unknown='ignore'), sensitive_features),
-            ("categorical_target", OneHotEncoder(categories=[['<=50K','>50K']],handle_unknown='ignore'), target_class),
+            ("sensitive_onehot", OneHotEncoder(categories=[[unprotected_value, protected_value]], handle_unknown='ignore'), sensitive_features),
+            ("categorical_target", OneHotEncoder(categories=[[negative_class, positive_class]], handle_unknown='ignore'), target_class)
         ])
 
         train, validation = train_test_split(train_dataframe, test_size=0.2, random_state=get_seed())
@@ -490,8 +359,7 @@ class DatasetLoader(object):
                 'features': test[:, :-num_classes],
                 'labels': test[:, -num_target:],
                 'sensitive': test_sensitive
-            },
-            'protected_value': 'Female'
+            }
         }
 
         return dataset
