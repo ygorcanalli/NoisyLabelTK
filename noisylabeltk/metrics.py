@@ -6,6 +6,7 @@ class Accuracy(BinaryAccuracy):
         return super(Accuracy, self).update_state(y_true[:, -2:], y_pred, sample_weight)
 
 def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
+    np.seterr(invalid='ignore')
 
     tpr = tp / (tp + fn)
     fpr = fp / (fp + tn)

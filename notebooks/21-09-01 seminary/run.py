@@ -19,11 +19,12 @@ if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-def get_p_list(fp_male, fn_male, fp_female, fn_female):
-    P_list = [np.array([[1 - fp_male, fp_male],
-                        [fn_male, 1 - fn_male]]),
-              np.array([[1 - fp_female, fp_female],
-                        [fn_female, 1 - fn_female]])]
+def get_p_list(unprotected_demotion, unprotected_promotion, protected_demotion,
+    protected_promotion):
+    P_list = [np.array([[1 - unprotected_demotion, unprotected_demotion],
+                        [unprotected_promotion, 1 - unprotected_promotion]]),
+              np.array([[1 - protected_demotion, protected_demotion],
+                        [protected_promotion, 1 - protected_promotion]])]
     return P_list
 
 def run(parameters, hyperparameters):
