@@ -13,7 +13,7 @@ host = 'localhost'
 port = 27017
 database_name = 'fairness'
 tags = ['verify inversion']
-collection_name = 'genetic_optimization'
+collection_name = 'genetic_optimization_debug'
 n_jobs = 4
 device = 'cpu'
 
@@ -30,9 +30,9 @@ def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'income'
+    dataset_name = 'german_age'
     robust_method = 'fair-forward'
-    auc_prune = 0.8
+    auc_prune = 0.70
     target_metric = 'Positives'
 
     hyperparameters = {
@@ -51,7 +51,7 @@ def fitness_func(solution, solution_idx):
 
     parameters = {
         'batch-size': 32,
-        'epochs': 10,
+        'epochs': 15,
         'dataset': dataset_name,
         'model': 'simple-mlp',
         'noise': None,

@@ -114,7 +114,7 @@ class Experiment(object):
         overall_rates = fairness_metrics_from_confusion_matrix(overall_tp, overall_tn,
                                                                overall_fp, overall_fn)
 
-        auc = evaluate_auc(np.array(true[0]).reshape(true.shape[1]).astype(int), logits)
+        auc = evaluate_auc(np.array(true).reshape(true.shape[0]).astype(int), logits)
 
         self.run_entry['metrics']['AUC_overall'] = auc
 
