@@ -1,6 +1,6 @@
 from noisylabeltk.loss import make_loss
 from datetime import datetime
-from noisylabeltk.metrics import Accuracy, fairness_metrics_from_confusion_matrix
+from noisylabeltk.metrics import Accuracy, fairness_metrics_from_confusion_matrix, evaluate_auc
 from pymongo import MongoClient
 import noisylabeltk.models as models
 import numpy as np
@@ -83,6 +83,7 @@ class Experiment(object):
     def evaluate_discrimination(self, test, batch_size):
 
         pred = self.model.predict(test['features'])
+        logits = np.array(pred[:,1])
         pred = np.argmax(pred, axis=1).reshape(pred.shape[0]).astype(bool)
 
         true = np.argmax(test['labels'][:,-2:], axis=1).reshape(pred.shape[0]).astype(bool)
@@ -94,10 +95,10 @@ class Experiment(object):
         protected_fp = (pred & ~true & protected).sum()
         protected_fn = (~pred & true & protected).sum()
 
-        unprotected_tp = (pred & true & ~protected).sum()
-        unprotected_tn = (~pred & ~true & ~protected).sum()
-        unprotected_fp = (pred & ~true & ~protected).sum()
-        unprotected_fn = (~pred & true & ~protected).sum()
+        privileged_tp = (pred & true & ~protected).sum()
+        privileged_tn = (~pred & ~true & ~protected).sum()
+        privileged_fp = (pred & ~true & ~protected).sum()
+        privileged_fn = (~pred & true & ~protected).sum()
 
         overall_tp = (pred & true).sum()
         overall_tn = (~pred & ~true).sum()
@@ -107,21 +108,27 @@ class Experiment(object):
         protected_rates = fairness_metrics_from_confusion_matrix(protected_tp, protected_tn,
                                                                  protected_fp, protected_fn)
 
-        unprotected_rates = fairness_metrics_from_confusion_matrix(unprotected_tp, unprotected_tn,
-                                                                   unprotected_fp, unprotected_fn)
+        privileged_rates = fairness_metrics_from_confusion_matrix(privileged_tp, privileged_tn,
+                                                                   privileged_fp, privileged_fn)
 
         overall_rates = fairness_metrics_from_confusion_matrix(overall_tp, overall_tn,
                                                                overall_fp, overall_fn)
 
-        for name in unprotected_rates.keys():
-            unprotected_value = unprotected_rates[name]
+        auc = evaluate_auc(np.array(true[0]).reshape(true.shape[1]).astype(int), logits)
+
+        self.run_entry['metrics']['AUC_overall'] = auc
+
+        for name in privileged_rates.keys():
+            privileged_value = privileged_rates[name]
             protected_value = protected_rates[name]
             overall_value = overall_rates[name]
             self.run_entry['metrics']['%s_protected' % name] = protected_value
-            self.run_entry['metrics']['%s_unprotected' % name] = unprotected_value
+            self.run_entry['metrics']['%s_privileged' % name] = privileged_value
             self.run_entry['metrics']['%s_overall' % name] = overall_value
-            self.run_entry['metrics']['%s_balance' % name] = unprotected_value - protected_value
-            self.run_entry['metrics']['%s_relative_balance' % name] = (unprotected_value - protected_value) / overall_value
+            self.run_entry['metrics']['%s_balance' % name] = privileged_value - protected_value
+            self.run_entry['metrics']['%s_relative_balance' % name] = (privileged_value - protected_value) / overall_value
+
+
 
         audit_acc = (pred == true).sum() / test['labels'].shape[0]
         self.run_entry['metrics']['audit_acc'] = audit_acc

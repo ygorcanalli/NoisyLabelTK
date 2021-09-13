@@ -1,9 +1,14 @@
 import numpy as np
 from keras.metrics import BinaryAccuracy
+from sklearn.metrics import roc_curve, auc
 
 class Accuracy(BinaryAccuracy):
     def update_state(self, y_true, y_pred, sample_weight=None):
         return super(Accuracy, self).update_state(y_true[:, -2:], y_pred, sample_weight)
+
+def evaluate_auc(true, pred):
+    fpr, tpr, thresholds = roc_curve(true, pred)
+    return auc(fpr, tpr)
 
 def fairness_metrics_from_confusion_matrix(tp, tn, fp, fn):
     np.seterr(invalid='ignore')
