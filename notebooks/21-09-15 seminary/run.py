@@ -14,25 +14,25 @@ port = 27017
 database_name = 'fairness'
 tags = ['verify inversion']
 collection_name = 'genetic_optimization'
-n_jobs = 8
+n_jobs = 4
 device = 'cpu'
 
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-def get_p_list(unprotected_demotion, unprotected_promotion, protected_demotion,
+def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     protected_promotion):
-    P_list = [np.array([[1 - unprotected_demotion, unprotected_demotion],
-                        [unprotected_promotion, 1 - unprotected_promotion]]),
+    P_list = [np.array([[1 - privileged_demotion, privileged_demotion],
+                        [privileged_promotion, 1 - privileged_promotion]]),
               np.array([[1 - protected_demotion, protected_demotion],
                         [protected_promotion, 1 - protected_promotion]])]
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'german'
+    dataset_name = 'income'
     robust_method = 'fair-forward'
-    accuracy_prune = 0.72
+    auc_prune = 0.8
     target_metric = 'Positives'
 
     hyperparameters = {
@@ -45,9 +45,9 @@ def fitness_func(solution, solution_idx):
 
     protected_promotion = solution[0]
     protected_demotion = solution[1]
-    unprotected_promotion = solution[2]
-    unprotected_demotion = solution[3]
-    p_list = get_p_list(unprotected_demotion, unprotected_promotion, protected_demotion,protected_promotion)
+    privileged_promotion = solution[2]
+    privileged_demotion = solution[3]
+    p_list = get_p_list(privileged_demotion, privileged_promotion, protected_demotion,protected_promotion)
 
     parameters = {
         'batch-size': 32,
@@ -60,8 +60,8 @@ def fitness_func(solution, solution_idx):
         'loss-args': [p_list],
         'protected-promotion': protected_promotion,
         'protected-demotion': protected_demotion,
-        'unprotected-promotion': unprotected_promotion,
-        'unprotected-demotion': unprotected_demotion,
+        'privileged-promotion': privileged_promotion,
+        'privileged-demotion': privileged_demotion,
         'loss-kwargs': None,
     }
 
@@ -80,11 +80,11 @@ def fitness_func(solution, solution_idx):
     exp.evaluate_discrimination(dataset['test'], parameters['batch-size'])
 
 
-    acc = float(exp.run_entry['metrics']['ACC_overall'])
+    auc = float(exp.run_entry['metrics']['AUC_overall'])
     metric = abs(float(exp.run_entry['metrics']['%s_balance' % target_metric]))
 
-    if (acc > accuracy_prune and not np.isnan(metric) and metric > 0):
-        fitness = 1/metric
+    if (auc >= auc_prune and not np.isnan(metric) and metric > 0):
+        fitness = fitness = 1/metric
     else:
         fitness = 0
 
@@ -96,7 +96,7 @@ def fitness_func(solution, solution_idx):
 
 def callback_generation(ga_instance):
     print("Generation = {generation}".format(generation=ga_instance.generations_completed))
-    print("Fitness    = {fitness}".format(fitness=ga_instance.best_solution()[1]))
+    print("Fitness    = {fitness}".format(fitness=1/ga_instance.best_solution()[1]))
 
 
 def fitness_wrapper(solution):
@@ -127,6 +127,10 @@ sol_per_pop = 8
 num_genes = 4
 init_range_low = 0.0
 init_range_high = 1.0
+initial_population = [ [0.1, 0.01, 0.01, 0.1],
+                       [0.2, 0.02, 0.02, 0.2],
+                       [0.3, 0.03, 0.03, 0.3],
+                       [0.4, 0.04, 0.04, 0.4]]
 
 start_time = time.time()
 
@@ -136,6 +140,7 @@ ga_instance = PooledGA(num_generations=num_generations,
                        num_parents_mating=num_parents_mating,
                        fitness_func=fitness_func,
                        num_genes=num_genes,
+                       #initial_population=initial_population,
                        sol_per_pop=sol_per_pop,
                        init_range_low=init_range_low,
                        init_range_high=init_range_high,
@@ -151,10 +156,9 @@ with Pool(processes=4) as pool:
     ga_instance.run()
 
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
-    print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
+    print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=1/solution_fitness))
     print("Index of the best solution : {solution_idx}".format(solution_idx=solution_idx))
 
     print("--- %s seconds ---" % (time.time() - start_time))
-
-# After the generations complete, some plots are showed that summarize how the outputs/fitness values evolve over generations.
-ga_instance.plot_result(title="PyGAD & Keras - Iteration vs. Fitness", linewidth=4)
+    # After the generations complete, some plots are showed that summarize how the outputs/fitness values evolve over generations.
+    ga_instance.plot_result(title="PyGAD & Keras - Iteration vs. Fitness", linewidth=4)

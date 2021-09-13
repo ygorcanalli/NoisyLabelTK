@@ -6,12 +6,12 @@ from pymongo import MongoClient
 
 def get_metric_matrix(collection, metric_name, dataset):
     x_values = collection.distinct('parameters.protected-promotion')
-    y_values = collection.distinct('parameters.unprotected-demotion')
+    y_values = collection.distinct('parameters.privileged-demotion')
     result = np.zeros( (len(x_values), len(y_values)) )
 
     for i, x in enumerate(x_values):
         for j, y in enumerate(y_values):
-            item = collection.find_one({'parameters.protected-promotion': x, 'parameters.unprotected-demotion': y, 'parameters.dataset': dataset})
+            item = collection.find_one({'parameters.protected-promotion': x, 'parameters.privileged-demotion': y, 'parameters.dataset': dataset})
             metric = item['metrics'][metric_name]
             result[i,j] = metric
 
@@ -193,7 +193,7 @@ metrics = ['ACC_balance',
 datasets = ['german', 'income']
 for dataset in datasets:
     for metric_name in metrics:
-        data, protected_promotion, unprotected_demotion = get_metric_matrix(collection, metric_name, dataset)
+        data, protected_promotion, privileged_demotion = get_metric_matrix(collection, metric_name, dataset)
         metric_name = metric_name.replace('_', ' ')
         make_plot(data, metric_name, protected_promotion, 'Protected promotion',
-                  unprotected_demotion, 'Unprotected demotion', dataset)
+                  privileged_demotion, 'privileged demotion', dataset)

@@ -11,7 +11,7 @@ host = 'localhost'
 port = 27017
 database_name = 'fairness'
 tags = ['verify inversion']
-collection_name = '21_09_01_seminary'
+collection_name = '21_09_01_seminary_auc'
 n_jobs = 8
 device = 'cpu'
 
