@@ -83,10 +83,17 @@ class Experiment(object):
     def evaluate_discrimination(self, test, batch_size):
 
         pred = self.model.predict(test['features'])
-        logits = np.array(pred[:,1])
+        #logits = np.asarray(pred[:,1])
+        #pred = np.asarray(np.argmax(pred, axis=1)).reshape(pred.shape[0]).astype(bool)
+
+        #true = np.asarray(np.argmax(test['labels'][:,-2:], axis=1)).reshape(pred.shape[0]).astype(bool)
+
+        #protected = np.asarray(test['labels'][:, 1]).reshape(pred.shape[0]).astype(bool)
+        pred = self.model.predict(test['features'])
+        logits = np.array(pred[:, 1])
         pred = np.argmax(pred, axis=1).reshape(pred.shape[0]).astype(bool)
 
-        true = np.argmax(test['labels'][:,-2:], axis=1).reshape(pred.shape[0]).astype(bool)
+        true = np.argmax(test['labels'][:, -2:], axis=1).reshape(pred.shape[0]).astype(bool)
 
         protected = test['labels'][:, 1].reshape(pred.shape[0]).astype(bool)
 
@@ -114,7 +121,8 @@ class Experiment(object):
         overall_rates = fairness_metrics_from_confusion_matrix(overall_tp, overall_tn,
                                                                overall_fp, overall_fn)
 
-        auc = evaluate_auc(np.array(true).reshape(true.shape[0]).astype(int), logits)
+        #auc = evaluate_auc(true.astype(int), logits)
+        auc = evaluate_auc(np.array(true[0]).reshape(true.shape[1]).astype(int), logits)
 
         self.run_entry['metrics']['AUC_overall'] = auc
 

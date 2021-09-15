@@ -30,9 +30,8 @@ def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'german_age'
+    dataset_name = 'income'
     robust_method = 'fair-forward'
-    auc_prune = 0.70
     target_metric = 'Positives'
 
     hyperparameters = {
@@ -51,7 +50,7 @@ def fitness_func(solution, solution_idx):
 
     parameters = {
         'batch-size': 32,
-        'epochs': 15,
+        'epochs': 10,
         'dataset': dataset_name,
         'model': 'simple-mlp',
         'noise': None,
@@ -83,8 +82,8 @@ def fitness_func(solution, solution_idx):
     auc = float(exp.run_entry['metrics']['AUC_overall'])
     metric = abs(float(exp.run_entry['metrics']['%s_balance' % target_metric]))
 
-    if (auc >= auc_prune and not np.isnan(metric) and metric > 0):
-        fitness = fitness = 1/metric
+    if (auc > 0.8 and not np.isnan(metric) and metric > 0):
+        fitness = 1/metric
     else:
         fitness = 0
 
@@ -127,10 +126,7 @@ sol_per_pop = 8
 num_genes = 4
 init_range_low = 0.0
 init_range_high = 1.0
-initial_population = [ [0.1, 0.01, 0.01, 0.1],
-                       [0.2, 0.02, 0.02, 0.2],
-                       [0.3, 0.03, 0.03, 0.3],
-                       [0.4, 0.04, 0.04, 0.4]]
+gene_space = np.linspace(0.0, 1.0, 101)
 
 start_time = time.time()
 
@@ -149,7 +145,8 @@ ga_instance = PooledGA(num_generations=num_generations,
                        mutation_type=mutation_type,
                        mutation_percent_genes=mutation_percent_genes,
                        keep_parents=keep_parents,
-                       on_generation=callback_generation)
+                       on_generation=callback_generation,
+                       gene_space=gene_space)
 
 
 with Pool(processes=4) as pool:

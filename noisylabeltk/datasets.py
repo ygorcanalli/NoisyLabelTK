@@ -86,21 +86,19 @@ class DatasetLoader(object):
                               'numbermaintence']
 
         dataframe['label'] = dataframe['label'].astype(str)
-        dataframe.loc[dataframe['label'] == '1','label'] = 'Good'
-        dataframe.loc[dataframe['label'] == '2','label'] = 'Bad'
+        dataframe.loc[dataframe['label'] == '1', 'label'] = 'Good'
+        dataframe.loc[dataframe['label'] == '2', 'label'] = 'Bad'
 
-        # A91: male: divorced / separated
-        # A92: female: divorced / separated / married
-        # A93: male: single
-        # A94: male: married / widowed
-        # A95: female: single
+        dataframe['age_discrete'] = dataframe['age'].astype(str)
+        dataframe.loc[dataframe['age'] <= 25, 'age_discrete'] = 'Younger'
+        dataframe.loc[dataframe['age'] > 25, 'age_discrete'] = 'Older'
 
-        sensitive_features = ['personalstatus']
         dataframe.loc[dataframe['personalstatus'] == 'A91', 'personalstatus'] = 'Male'
         dataframe.loc[dataframe['personalstatus'] == 'A93', 'personalstatus'] = 'Male'
         dataframe.loc[dataframe['personalstatus'] == 'A94', 'personalstatus'] = 'Male'
         dataframe.loc[dataframe['personalstatus'] == 'A92', 'personalstatus'] = 'Female'
-        #dataframe.loc[dataframe['personalstatus'] == 'A95', 'personalstatus'] = 'Female' no single female in dataset
+
+        sensitive_features = ['personalstatus']
         privileged_value = 'Male'
         protected_value = 'Female'
 
@@ -111,8 +109,15 @@ class DatasetLoader(object):
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
-            ("sensitive_onehot", OneHotEncoder(categories=[[privileged_value, protected_value]],handle_unknown='ignore'), sensitive_features),
-            ("categorical_target", OneHotEncoder(categories=[[negative_class, positive_class]],handle_unknown='ignore'), target_class)
+            ("age_onehot",
+             OneHotEncoder(categories=[['Older', 'Younger']], handle_unknown='ignore'),
+             ['age_discrete']),
+            ("sensitive_onehot",
+             OneHotEncoder(categories=[[privileged_value, protected_value]], handle_unknown='ignore'),
+             sensitive_features),
+            (
+            "categorical_target", OneHotEncoder(categories=[[negative_class, positive_class]], handle_unknown='ignore'),
+            target_class)
         ])
 
         train, test = train_test_split(dataframe, test_size=150, random_state=get_seed())
@@ -169,7 +174,7 @@ class DatasetLoader(object):
         dataframe = pd.read_csv(path, names=column_names, delim_whitespace=True)
         categorical_features = ['status', 'history', 'purpose', 'savings', 'employmentsince', 'personalstatus',
                                 'garantors', 'property', 'othereinstallments', 'housing', 'job', 'telephone']
-        numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'existingcredits',
+        numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'age', 'existingcredits',
                               'numbermaintence']
 
         dataframe['label'] = dataframe['label'].astype(str)
@@ -179,6 +184,11 @@ class DatasetLoader(object):
         dataframe['age_discrete'] = dataframe['age'].astype(str)
         dataframe.loc[dataframe['age'] <= 25, 'age_discrete'] = 'Younger'
         dataframe.loc[dataframe['age'] > 25,  'age_discrete'] = 'Older'
+
+        dataframe.loc[dataframe['personalstatus'] == 'A91', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A93', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A94', 'personalstatus'] = 'Male'
+        dataframe.loc[dataframe['personalstatus'] == 'A92', 'personalstatus'] = 'Female'
 
         sensitive_features = ['age_discrete']
         privileged_value = 'Older'
@@ -238,7 +248,6 @@ class DatasetLoader(object):
         }
 
         return dataset
-
 
     def _load_income(self):
         train_path = os.path.join(BASE_PATH, 'income', 'adult.data')
