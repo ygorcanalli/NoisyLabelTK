@@ -30,7 +30,7 @@ def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'income'
+    dataset_name = 'german_age'
     robust_method = 'fair-forward'
     target_metric = 'Positives'
 
@@ -82,7 +82,7 @@ def fitness_func(solution, solution_idx):
     auc = float(exp.run_entry['metrics']['AUC_overall'])
     metric = abs(float(exp.run_entry['metrics']['%s_balance' % target_metric]))
 
-    if (auc > 0.8 and not np.isnan(metric) and metric > 0):
+    if (auc > 0.7 and not np.isnan(metric) and metric > 0):
         fitness = 1/metric
     else:
         fitness = 0
@@ -121,7 +121,7 @@ parent_selection_type = "sss"  # Type of parent selection.
 crossover_type = "single_point"  # Type of the crossover operator.
 mutation_type = "random"  # Type of the mutation operator.
 mutation_percent_genes = 10  # Percentage of genes to mutate. This parameter has no action if the parameter mutation_num_genes exists.
-keep_parents = -1  # Number of parents to keep in the next population. -1 means keep all parents and 0 means keep nothing.
+keep_parents = 2  # Number of parents to keep in the next population. -1 means keep all parents and 0 means keep nothing.
 sol_per_pop = 8
 num_genes = 4
 init_range_low = 0.0
