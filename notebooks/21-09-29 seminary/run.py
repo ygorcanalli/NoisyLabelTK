@@ -3,6 +3,7 @@
 import numpy as np
 from noisylabeltk.experiment import Experiment
 from noisylabeltk.datasets import DatasetLoader
+from sklearn.model_selection import train_test_split
 import pygad
 import time
 from multiprocessing import Pool
@@ -13,7 +14,7 @@ host = 'localhost'
 port = 27017
 database_name = 'fairness'
 tags = ['verify inversion']
-collection_name = 'genetic_optimization_debug'
+collection_name = 'genetic_optimization_hval'
 n_jobs = 4
 device = 'cpu'
 
@@ -74,20 +75,25 @@ def fitness_func(solution, solution_idx):
                      tags=tags)
 
     exp.build_model(hyperparameters)
-    exp.fit_model(dataset['train'], dataset['validation'], parameters['batch-size'])
-    exp.evaluate(dataset['test'], parameters['batch-size'])
-    exp.evaluate_discrimination(dataset['test'], parameters['batch-size'])
+
+    exp.fit_model(dataset['train'], parameters['batch-size'])
+    exp.evaluate(dataset['validation'], parameters['batch-size'], prefix='validation')
+    exp.evaluate_discrimination(dataset['validation'], parameters['batch-size'], prefix='validation')
 
 
-    auc = float(exp.run_entry['metrics']['AUC_overall'])
-    metric = abs(float(exp.run_entry['metrics']['%s_balance' % target_metric]))
+    auc = float(exp.run_entry['metrics']['validation_AUC_overall'])
+    metric = abs(float(exp.run_entry['metrics']['validation_%s_balance' % target_metric]))
 
-    if (auc > 0.7 and not np.isnan(metric) and metric > 0):
+    if (auc > 0.8 and not np.isnan(metric) and metric > 0):
         fitness = 1/metric
     else:
         fitness = 0
 
     exp.run_entry['fitness'] = fitness
+
+    exp.evaluate(dataset['test'], parameters['batch-size'], prefix='test')
+    exp.evaluate_discrimination(dataset['test'], parameters['batch-size'], prefix='test')
+
     exp.persist_metadata()
 
     return fitness
@@ -126,8 +132,8 @@ keep_parents = 2  # Number of parents to keep in the next population. -1 means k
 sol_per_pop = 100
 num_genes = 4
 init_range_low = 0.0
-init_range_high = 1.0
-gene_space = np.linspace(0.0, 1.0, 101)
+init_range_high = 0.99
+gene_space = np.linspace(0.0, 0.99, 100)
 
 start_time = time.time()
 

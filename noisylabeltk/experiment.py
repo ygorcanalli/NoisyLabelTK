@@ -67,20 +67,20 @@ class Experiment(object):
         self.model.summary(print_fn=lambda x: summary_list.append(x))
         self.run_entry['parameters']['model-summary'] = '\n'.join(summary_list)
 
-    def fit_model(self, train, validation, batch_size):
+    def fit_model(self, train, batch_size):
 
         history = self.model.fit(train['features'], train['labels'], batch_size, epochs=10,
-                                 validation_data=(validation['features'], validation['labels']),
+                                 validation_split=0.2,
                                  verbose=0)
 
 
-    def evaluate(self, test, batch_size):
+    def evaluate(self, test, batch_size, prefix):
         eval_metrics = self.model.evaluate(test['features'], test['labels'], batch_size, verbose=0)
 
         for j, metric in enumerate(eval_metrics):
-            self.run_entry['metrics']['eval_' + self.model.metrics_names[j]] = metric
+            self.run_entry['metrics'][prefix + '_' + self.model.metrics_names[j]] = metric
 
-    def evaluate_discrimination(self, test, batch_size):
+    def evaluate_discrimination(self, test, batch_size, prefix):
 
         pred = self.model.predict(test['features'])
         logits = np.asarray(pred[:,1])
@@ -108,29 +108,34 @@ class Experiment(object):
                                                                  protected_fp, protected_fn)
 
         privileged_rates = fairness_metrics_from_confusion_matrix(privileged_tp, privileged_tn,
-                                                                   privileged_fp, privileged_fn)
+                                                                  privileged_fp, privileged_fn)
 
         overall_rates = fairness_metrics_from_confusion_matrix(overall_tp, overall_tn,
                                                                overall_fp, overall_fn)
 
-        auc = evaluate_auc(true.astype(int), logits)
 
-        self.run_entry['metrics']['AUC_overall'] = auc
+        try:
+            auc = evaluate_auc(true.astype(int), logits)
+        except:
+            print(true.astype(int))
+            print(logits)
+
+        self.run_entry['metrics']['%s_AUC_overall' % prefix] = auc
 
         for name in privileged_rates.keys():
             privileged_value = privileged_rates[name]
             protected_value = protected_rates[name]
             overall_value = overall_rates[name]
-            self.run_entry['metrics']['%s_protected' % name] = protected_value
-            self.run_entry['metrics']['%s_privileged' % name] = privileged_value
-            self.run_entry['metrics']['%s_overall' % name] = overall_value
-            self.run_entry['metrics']['%s_balance' % name] = privileged_value - protected_value
-            self.run_entry['metrics']['%s_relative_balance' % name] = (privileged_value - protected_value) / overall_value
+            self.run_entry['metrics']['%s_%s_protected' % (prefix, name)] = protected_value
+            self.run_entry['metrics']['%s_%s_privileged' % (prefix, name)] = privileged_value
+            self.run_entry['metrics']['%s_%s_overall' % (prefix, name)] = overall_value
+            self.run_entry['metrics']['%s_%s_balance' % (prefix, name)] = privileged_value - protected_value
+            self.run_entry['metrics']['%s_%s_relative_balance' % (prefix, name)] = (privileged_value - protected_value) / overall_value
 
 
 
         audit_acc = (pred == true).sum() / test['labels'].shape[0]
-        self.run_entry['metrics']['audit_acc'] = audit_acc
+        self.run_entry['metrics']['%s_audit_acc' % prefix] = audit_acc
 
     def persist_metadata(self):
 
