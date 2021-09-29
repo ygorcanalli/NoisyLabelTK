@@ -5,10 +5,11 @@ from pymongo import MongoClient
 import noisylabeltk.models as models
 import numpy as np
 from pprint import pformat
+from tensorflow.keras.callbacks import EarlyStopping
 
 class Experiment(object):
 
-    def __init__(self, num_features, num_classes, parameters, database_name, collection_name, tags=None):
+    def __init__(self, num_features, num_classes, parameters, database_name, collection_name=None, tags=None):
 
         self.parameters = parameters
         self.database_name = database_name
@@ -67,20 +68,30 @@ class Experiment(object):
         self.model.summary(print_fn=lambda x: summary_list.append(x))
         self.run_entry['parameters']['model-summary'] = '\n'.join(summary_list)
 
-    def fit_model(self, train, batch_size):
+    def fit_model(self, train, verbose=False):
 
-        history = self.model.fit(train['features'], train['labels'], batch_size, epochs=10,
+        callbacks = []
+        if 'patience' in self.parameters:
+            es = EarlyStopping(monitor='loss', patience=self.parameters['patience'])
+            callbacks.append(es)
+
+        history = self.model.fit(train['features'], train['labels'], self.parameters['batch-size'],
+                                 callbacks=callbacks,
+                                 epochs=self.parameters['epochs'],
                                  validation_split=0.2,
-                                 verbose=0)
+                                 verbose=verbose)
 
 
-    def evaluate(self, test, batch_size, prefix):
-        eval_metrics = self.model.evaluate(test['features'], test['labels'], batch_size, verbose=0)
+
+
+
+    def evaluate(self, test, prefix='test', verbose=False):
+        eval_metrics = self.model.evaluate(test['features'], test['labels'], verbose=verbose)
 
         for j, metric in enumerate(eval_metrics):
             self.run_entry['metrics'][prefix + '_' + self.model.metrics_names[j]] = metric
 
-    def evaluate_discrimination(self, test, batch_size, prefix):
+    def evaluate_discrimination(self, test, prefix='test'):
 
         pred = self.model.predict(test['features'])
         logits = np.asarray(pred[:,1])

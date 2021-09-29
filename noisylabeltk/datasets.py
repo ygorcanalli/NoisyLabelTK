@@ -45,8 +45,7 @@ class DatasetLoader(object):
         self.sensitive_labels=sensitive_labels
         self.datasets = {
             'income': self._load_income,
-            'german': self._load_germancredit,
-            'german_sex': self._load_germancredit,
+            'german_sex': self._load_germancredit_sex,
             'german_age': self._load_germancredit_age,
         }
         self.batch_size = batch_size
@@ -72,7 +71,7 @@ class DatasetLoader(object):
 
         return (train_ds, validation_ds, test_ds), dataset['num_features'], dataset['num_classes']
 
-    def _load_germancredit(self):
+    def _load_germancredit_sex(self):
         path = os.path.join(BASE_PATH, 'german_credit', 'german.data')
         column_names = ['status', 'duration', 'history', 'purpose', 'amount', 'savings', 'employmentsince',
                         'installmentate', 'personalstatus', 'garantors', 'residencesince', 'property', 'age',
@@ -109,9 +108,9 @@ class DatasetLoader(object):
         ct = ColumnTransformer([
             ("categorical_onehot", OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ("numerical", StandardScaler(), numerical_features),
-            ("age_onehot",
-             OneHotEncoder(categories=[['Older', 'Younger']], handle_unknown='ignore'),
-             ['age_discrete']),
+            #("age_onehot",
+            # OneHotEncoder(categories=[['Older', 'Younger']], handle_unknown='ignore'),
+            # ['age_discrete']),
             ("sensitive_onehot",
              OneHotEncoder(categories=[[privileged_value, protected_value]], handle_unknown='ignore'),
              sensitive_features),
@@ -174,8 +173,8 @@ class DatasetLoader(object):
         dataframe = pd.read_csv(path, names=column_names, delim_whitespace=True)
         categorical_features = ['status', 'history', 'purpose', 'savings', 'employmentsince', 'personalstatus',
                                 'garantors', 'property', 'othereinstallments', 'housing', 'job', 'telephone']
-        numerical_features = ['duration', 'amount', 'installmentate', 'residencesince', 'age', 'existingcredits',
-                              'numbermaintence']
+        numerical_features = ['duration', 'amount', 'installmentate', 'residencesince',
+                              'existingcredits', 'age', 'numbermaintence']
 
         dataframe['label'] = dataframe['label'].astype(str)
         dataframe.loc[dataframe['label'] == '1','label'] = 'Good'
@@ -184,11 +183,6 @@ class DatasetLoader(object):
         dataframe['age_discrete'] = dataframe['age'].astype(str)
         dataframe.loc[dataframe['age'] <= 25, 'age_discrete'] = 'Younger'
         dataframe.loc[dataframe['age'] > 25,  'age_discrete'] = 'Older'
-
-        dataframe.loc[dataframe['personalstatus'] == 'A91', 'personalstatus'] = 'Male'
-        dataframe.loc[dataframe['personalstatus'] == 'A93', 'personalstatus'] = 'Male'
-        dataframe.loc[dataframe['personalstatus'] == 'A94', 'personalstatus'] = 'Male'
-        dataframe.loc[dataframe['personalstatus'] == 'A92', 'personalstatus'] = 'Female'
 
         sensitive_features = ['age_discrete']
         privileged_value = 'Older'

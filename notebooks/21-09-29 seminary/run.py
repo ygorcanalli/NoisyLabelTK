@@ -14,8 +14,8 @@ host = 'localhost'
 port = 27017
 database_name = 'fairness'
 tags = ['verify inversion']
-collection_name = 'genetic_optimization_hval'
-n_jobs = 4
+collection_name = 'genetic_optimization_german'
+n_jobs = 8
 device = 'cpu'
 
 if device == 'cpu':
@@ -31,16 +31,16 @@ def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'income'
+    dataset_name = 'german_sex'
     robust_method = 'fair-forward'
     target_metric = 'Positives'
 
     hyperparameters = {
-        'num_layers': 3,
+        'num_layers': 2,
         'dropout': 0.2
     }
 
-    for i, size in enumerate([32, 64, 32]):
+    for i, size in enumerate([16, 32]):
         hyperparameters['hidden_size_%d' % i] = size
 
     protected_promotion = solution[0]
@@ -76,23 +76,23 @@ def fitness_func(solution, solution_idx):
 
     exp.build_model(hyperparameters)
 
-    exp.fit_model(dataset['train'], parameters['batch-size'])
-    exp.evaluate(dataset['validation'], parameters['batch-size'], prefix='validation')
-    exp.evaluate_discrimination(dataset['validation'], parameters['batch-size'], prefix='validation')
+    exp.fit_model(dataset['train'], verbose=0)
+    exp.evaluate(dataset['validation'],  prefix='validation', verbose=0)
+    exp.evaluate_discrimination(dataset['validation'], prefix='validation')
 
 
     auc = float(exp.run_entry['metrics']['validation_AUC_overall'])
     metric = abs(float(exp.run_entry['metrics']['validation_%s_balance' % target_metric]))
 
-    if (auc > 0.8 and not np.isnan(metric) and metric > 0):
+    if (auc > 0.7 and not np.isnan(metric) and metric > 0):
         fitness = 1/metric
     else:
         fitness = 0
 
     exp.run_entry['fitness'] = fitness
 
-    exp.evaluate(dataset['test'], parameters['batch-size'], prefix='test')
-    exp.evaluate_discrimination(dataset['test'], parameters['batch-size'], prefix='test')
+    exp.evaluate(dataset['test'], prefix='test', verbose=0)
+    exp.evaluate_discrimination(dataset['test'], prefix='test')
 
     exp.persist_metadata()
 
@@ -157,7 +157,7 @@ ga_instance = PooledGA(num_generations=num_generations,
                        gene_space=gene_space)
 
 
-with Pool(processes=4) as pool:
+with Pool(processes=n_jobs) as pool:
     ga_instance.run()
 
     solution, solution_fitness, solution_idx = ga_instance.best_solution()
