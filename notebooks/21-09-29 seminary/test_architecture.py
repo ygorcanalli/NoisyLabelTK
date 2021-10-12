@@ -23,7 +23,7 @@ if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-dataset_name = 'income'
+dataset_name = 'german_sex'
 robust_method = 'fair-forward'
 target_metric = 'Positives'
 
@@ -32,7 +32,7 @@ hyperparameters = {
     'dropout': 0.2
 }
 
-for i, size in enumerate([32, 64, 32]):
+for i, size in enumerate([32, 64]):
     hyperparameters['hidden_size_%d' % i] = size
 
 #T = {"r_priv": 0.74, "p_priv": 0.18, "r_prot": 0.4, "p_prot": 0.38}
@@ -41,8 +41,7 @@ p_list = get_p_list(T['r_priv'], T['p_priv'], T['r_prot'], T['p_prot'])
 
 parameters = {
     'batch-size': 32,
-    'patience': 30,
-    'epochs': 500,
+    'epochs': 50,
     'dataset': dataset_name,
     'model': 'simple-mlp',
     'noise': None,

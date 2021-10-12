@@ -13,7 +13,7 @@ import os
 host = 'localhost'
 port = 27017
 database_name = 'fairness'
-tags = ['verify inversion']
+tags = []
 collection_name = 'genetic_optimization_german'
 n_jobs = 8
 device = 'cpu'
@@ -21,6 +21,8 @@ device = 'cpu'
 if device == 'cpu':
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+
+dataset = DatasetLoader('german_age', 32, sensitive_labels=True).load()
 
 def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     protected_promotion):
@@ -31,7 +33,7 @@ def get_p_list(privileged_demotion, privileged_promotion, protected_demotion,
     return P_list
 
 def fitness_func(solution, solution_idx):
-    dataset_name = 'german_sex'
+    dataset_name = 'german_age'
     robust_method = 'fair-forward'
     target_metric = 'Positives'
 
@@ -40,7 +42,7 @@ def fitness_func(solution, solution_idx):
         'dropout': 0.2
     }
 
-    for i, size in enumerate([16, 32]):
+    for i, size in enumerate([32, 64]):
         hyperparameters['hidden_size_%d' % i] = size
 
     protected_promotion = solution[0]
@@ -51,7 +53,7 @@ def fitness_func(solution, solution_idx):
 
     parameters = {
         'batch-size': 32,
-        'epochs': 10,
+        'epochs': 50,
         'dataset': dataset_name,
         'model': 'simple-mlp',
         'noise': None,
@@ -65,7 +67,6 @@ def fitness_func(solution, solution_idx):
         'loss-kwargs': None,
     }
 
-    dataset = DatasetLoader(parameters['dataset'], parameters['batch-size'], sensitive_labels=True).load()
 
     exp = Experiment(dataset['num_features'],
                      dataset['num_classes'],
