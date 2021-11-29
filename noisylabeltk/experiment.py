@@ -1,7 +1,8 @@
 from noisylabeltk.loss import make_loss
 from datetime import datetime
 from noisylabeltk.metrics import Accuracy, fairness_metrics_from_confusion_matrix, evaluate_auc
-from pymongo import MongoClient
+
+
 import noisylabeltk.models as models
 import numpy as np
 from pprint import pformat
